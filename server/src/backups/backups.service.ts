@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs/promises';
@@ -6,10 +6,9 @@ import * as path from 'node:path';
 import { Backup } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateBackupDto } from './dto/create-backup.dto.js';
+import { toResponse } from './backup.mapper.js';
+import { createReadStream } from 'node:fs';
 
-function toResponse(backup: Backup) {
-  return { ...backup, sizeBytes: Number(backup.sizeBytes) };
-}
 
 @Injectable()
 export class BackupsService {
@@ -72,5 +71,22 @@ export class BackupsService {
     } finally {
       await fs.rm(file.path, { force: true });
     }
+  }
+
+  async getFile(id: string) {
+    const backup = await this.prisma.backup.findUnique({
+        where: { id }
+    });
+    if (!backup) {
+        throw new NotFoundException('Backup nicht gefunden');
+    }
+
+    const fullPath = path.join(this.dataDir, backup.storagePath);
+    const stat = await fs.stat(fullPath).catch(() => null);
+    if (!stat) {
+        throw new NotFoundException('Backup-Datei fehlt auf dem Server')
+    }
+
+    return { backup, size: stat.size, stream: createReadStream(fullPath) }; 
   }
 }

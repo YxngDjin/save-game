@@ -1,8 +1,12 @@
 import {
   Body,
   Controller,
+  Get,
+  Param,
   ParseFilePipe,
+  ParseUUIDPipe,
   Post,
+  StreamableFile,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -21,5 +25,15 @@ export class BackupsController {
     @Body() dto: CreateBackupDto,
   ) {
     return await this.backupService.create(dto, file);
+  }
+
+  @Get(':id/download')
+  async download(@Param('id', ParseUUIDPipe) id: string) {
+    const { backup, size, stream } = await this.backupService.getFile(id);
+    return new StreamableFile(stream, {
+        type: 'application/zip',
+        disposition: `attachment; filename="${backup.id}.zip"`,
+        length: size,
+    });
   }
 }
