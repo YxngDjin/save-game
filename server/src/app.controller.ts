@@ -1,7 +1,7 @@
-import { Controller, Get, Post } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service.js';
 import { PrismaService } from './prisma/prisma.service.js';
-import { randomUUID } from 'node:crypto';
+import { Public } from './auth/public.decorator.js';
 
 @Controller()
 export class AppController {
@@ -15,20 +15,14 @@ export class AppController {
     return this.appService.getHello();
   }
 
+  @Public()
   @Get('health')
   async gethealth() {
     const [devices, games, backups] = await Promise.all([
-      await this.prismaService.device.count(),
-      await this.prismaService.game.count(),
-      await this.prismaService.backup.count(),
+      this.prismaService.device.count(),
+      this.prismaService.game.count(),
+      this.prismaService.backup.count(),
     ]);
     return { status: 'ok', devices, games, backups };
-  }
-
-  @Post('dev/device')
-  async createDevDevice() {
-    return this.prismaService.device.create({
-      data: { name: 'Gaming-PC', tokenHash: randomUUID() },
-    });
   }
 }

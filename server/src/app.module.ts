@@ -5,6 +5,9 @@ import { PrismaModule } from './prisma/prisma.module.js';
 import { ConfigModule } from '@nestjs/config';
 import { BackupsModule } from './backups/backups.module.js';
 import { GamesModule } from './games/games.module.js';
+import { APP_GUARD } from '@nestjs/core';
+import { DeviceAuthGuard } from './auth/device-auth.guard.js';
+import { PairingModule } from './pairing/pairing.module.js';
 
 @Module({
   imports: [
@@ -12,8 +15,9 @@ import { GamesModule } from './games/games.module.js';
     PrismaModule,
     BackupsModule,
     GamesModule,
+    PairingModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: DeviceAuthGuard }],
 })
 export class AppModule {}
