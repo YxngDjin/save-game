@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use crate::paths;
+use crate::{backup, paths};
 use serde::Serialize;
 
 use crate::launchers::Game;
@@ -20,6 +20,8 @@ pub struct ScannedGame {
     pub game: Game,
     pub manifest_name: String,
     pub locations: Vec<SaveLocation>,
+    pub files: Vec<backup::BackupFile>,
+    pub total_size: u64,
 }
 
 pub fn match_steam_games(games: Vec<Game>, manifest: &Manifest, steam_root: &Path) -> Vec<ScannedGame> {
@@ -59,10 +61,15 @@ pub fn match_steam_games(games: Vec<Game>, manifest: &Manifest, steam_root: &Pat
             continue;
         }
 
+        let files = backup::collect_files(&locations, &ctx);
+        let total_size = files.iter().map(|f| f.size).sum();
+
         result.push(ScannedGame {
             game,
             manifest_name: name.to_string(),
             locations,
+            files,
+            total_size,
         });
     }
 
