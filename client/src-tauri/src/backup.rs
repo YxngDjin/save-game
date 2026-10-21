@@ -9,6 +9,7 @@ use std::path::Path;
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
 use zip::ZipArchive;
+use sha2::{Digest, Sha256};
 
 use crate::scan::ScannedGame;
 use crate::paths;
@@ -64,6 +65,8 @@ pub struct BackupInfo {
     pub launcher: String,
     pub launcher_id: String,
     pub created_at: String,
+    #[serde(default)]
+    pub content_hash: String,
     pub files: Vec<ArchivedFile>,
 }
 
@@ -73,6 +76,8 @@ pub struct ArchivedFile {
     pub portable: String,
     pub archive_path: String,
     pub size: u64,
+    #[serde(default)]
+    pub sha256: String,
 }
 
 fn archive_path(portable: &str) -> String {
@@ -107,12 +112,13 @@ fn write_zip(zip_path: &Path, scanned: &ScannedGame, created_at: &str) -> Result
         let archive_path = archive_path(&file.portable);
         zip.start_file(&archive_path, file_options())?;
         let mut source = File::open(&file.path)?;
-        io::copy(&mut source, &mut zip)?;
+        let sha256 = copy_and_hash(&mut source, &mut zip)?;
 
         archived.push(ArchivedFile {
             portable: file.portable.clone(),
             archive_path,
             size: file.size,
+            sha256
         });
     }
 
@@ -121,6 +127,7 @@ fn write_zip(zip_path: &Path, scanned: &ScannedGame, created_at: &str) -> Result
         launcher: scanned.game.launcher.clone(),
         launcher_id: scanned.game.launcher_id.clone(),
         created_at: created_at.to_string(),
+        content_hash: content_hash(&archived),
         files: archived,
     };
 
@@ -194,4 +201,32 @@ fn restore_inner(zip_path: &Path, ctx: &paths::Context) -> Result<usize, Box<dyn
     }
 
     Ok(targets.len())
+}
+
+fn copy_and_hash(source: &mut impl Read, dest: &mut impl Write) -> io::Result<String> {
+    let mut hasher = Sha256::new();
+    let mut buffer = [0u8; 64 * 1024];
+    loop {
+        let read = source.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+        dest.write_all(&buffer[..read])?;
+    }
+    Ok(hex::encode(hasher.finalize()))
+}
+
+fn content_hash(files: &[ArchivedFile]) -> String {
+    let mut sorted: Vec<&ArchivedFile> = files.iter().collect();
+    sorted.sort_by(|a, b | a.portable.cmp(&b.portable));
+
+    let mut hasher = Sha256::new();
+    for file in sorted {
+        hasher.update(file.portable.as_bytes());
+        hasher.update([0]);
+        hasher.update(file.sha256.as_bytes());
+        hasher.update([b'\n']);
+    }
+    hex::encode(hasher.finalize())
 }
