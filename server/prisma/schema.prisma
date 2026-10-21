@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Device {
+  id String @id @default(uuid())
+  name String
+  tokenHash String @unique
+  createdAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  backups Backup[]
+}
+
+model Game {
+  id String @id @default(uuid())
+  manifestName String @unique
+  displayName String
+  createdAt DateTime @default(now())
+  backups Backup[]
+}
+
+model Backup {
+  id String @id @default(uuid())
+  gameId String
+  deviceId String
+  parentId String?
+  contentHash String
+  launcher String
+  launcherId String
+  reason String
+  fileCount Int
+  sizeBytes BigInt
+  storagePath String
+  createdAt DateTime
+  uploadedAt DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id])
+  device Device @relation(fields: [deviceId], references: [id])
+  parent Backup? @relation("BackupLineage", fields: [parentId], references: [id])
+  children Backup[] @relation("BackupLineage")
+
+  @@index([gameId, createdAt])
+  @@index([gameId, contentHash])
+}
