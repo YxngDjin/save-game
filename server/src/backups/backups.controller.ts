@@ -13,6 +13,8 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateBackupDto } from './dto/create-backup.dto.js';
 import { BackupsService } from './backups.service.js';
+import { CurrentDevice } from '../auth/current-device.decorator.js';
+import type { Device } from '../generated/prisma/client.js';
 
 @Controller('backups')
 export class BackupsController {
@@ -23,17 +25,18 @@ export class BackupsController {
   async uploadBackup(
     @UploadedFile(new ParseFilePipe()) file: Express.Multer.File,
     @Body() dto: CreateBackupDto,
+    @CurrentDevice() device: Device,
   ) {
-    return await this.backupService.create(dto, file);
+    return await this.backupService.create(dto, file, device.id);
   }
 
   @Get(':id/download')
   async download(@Param('id', ParseUUIDPipe) id: string) {
     const { backup, size, stream } = await this.backupService.getFile(id);
     return new StreamableFile(stream, {
-        type: 'application/zip',
-        disposition: `attachment; filename="${backup.id}.zip"`,
-        length: size,
+      type: 'application/zip',
+      disposition: `attachment; filename="${backup.id}.zip"`,
+      length: size,
     });
   }
 }

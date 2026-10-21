@@ -13,7 +13,6 @@ import {
 export class CreateBackupDto {
   @IsString() @IsNotEmpty() manifestName: string;
   @IsString() @IsNotEmpty() displayName: string;
-  @IsUUID() deviceId: string;
   @IsOptional() @IsUUID() parentId?: string;
   @IsString() @Length(64, 64) contentHash: string;
   @IsString() launcher: string;
