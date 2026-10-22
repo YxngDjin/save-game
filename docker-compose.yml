@@ -7,6 +7,7 @@ services:
       - "${SAVEGAME_PORT:-3000}:3000"
     environment:
       - ADMIN_KEY=${ADMIN_KEY:?ADMIN_KEY muss gesetzt sein}
+      - TZ=Europe/Berlin
     volumes:
       - savegame-data:/data
 
