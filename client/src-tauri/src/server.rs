@@ -3,6 +3,7 @@ use std::time::Duration;
 use serde_json::Value;
 use reqwest::multipart::{Form, Part};
 use std::path::Path;
+use serde::de::DeserializeOwned;
 
 use crate::backup::BackupInfo;
 
@@ -161,4 +162,74 @@ pub async fn upload_backup(
         .json::<UploadResponse>()
         .await
         .map_err(|e| format!("Unerwartete Antwort vom Server: {e}"))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ServerGame {
+    id: String,
+    manifest_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ServerBackup {
+    pub id: String,
+    pub created_at: String,
+    pub file_count: u64,
+    pub size_bytes: u64,
+    pub reason: String,
+    pub device_name: String,
+    pub content_hash: String,
+}
+
+async fn get_json<T: DeserializeOwned>(base_url: &str, token: &str, path: &str) -> Result<T, String> {
+    let response = client()?
+        .get(format!("{base_url}{path}"))
+        .bearer_auth(token)
+        .send()
+        .await
+        .map_err(|e| format!("Server nicht erreichbar: {e}"))?;
+
+    if !response.status().is_success() {
+        return Err(error_message(response).await);
+    }
+
+    response
+        .json::<T>()
+        .await
+        .map_err(|e| format!("Unerwartete Antwort vom Server: {e}"))
+}
+
+pub async fn list_backups_for_game(base_url: &str, token: &str, manifest_name: &str) -> Result<Vec<ServerBackup>, String> {
+    let games: Vec<ServerGame> = get_json(base_url, token, "/games").await?;
+    let Some(game) = games.into_iter().find(|g| g.manifest_name == manifest_name) else {
+        return Ok(Vec::new());
+    };
+    get_json(base_url, token, &format!("/games/{}/backups", game.id)).await
+}
+
+pub async fn download_backup(base_url: &str, token: &str, backup_id: &str, target: &Path) -> Result<(), String> {
+    let response = client_with_timeout(600)?
+        .get(format!("{base_url}/backups/{backup_id}/download"))
+        .bearer_auth(token)
+        .send()
+        .await
+        .map_err(|e| format!("Server nicht erreichbar: {e}"))?;
+
+    if !response.status().is_success() {
+        return Err(error_message(response).await);
+    }
+
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| format!("Download abgebrochen: {e}"))?;
+
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let partial = target.with_extension("part");
+    std::fs::write(&partial, &bytes).map_err(|e| format!("ZIP konnte nicht gespeichert werden: {e}"))?;
+    std::fs::rename(&partial, target).map_err(|e| e.to_string())
 }

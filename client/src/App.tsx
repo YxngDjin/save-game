@@ -9,6 +9,22 @@ interface Game {
   installDir: string;
 }
 
+const reasonLabels: Record<string, string> = {
+  manual: "manuell",
+  auto: "automatisch",
+  "pre-restore": "vor Wiederherstellung",
+};
+
+interface ServerBackup {
+  id: string;
+  createdAt: string;
+  fileCount: number;
+  sizeBytes: number;
+  reason: string;
+  deviceName: string;
+  contentHash: string;
+}
+
 interface PairingStatus {
   serverUrl: string | null;
   deviceName: string | null;
@@ -73,9 +89,42 @@ function App() {
   const [pairing, setPairing] = useState<PairingStatus | null>(null);
   const [deviceName, setDeviceName] = useState("Gaming-PC");
   const [pairCode, setPairCode] = useState("");
+  const [serverBackups, setServerBackups] = useState<
+    Record<string, ServerBackup[]>
+  >({});
 
   function setStatus(launcherId: string, text: string) {
     setBackupStatus((prev) => ({ ...prev, [launcherId]: text }));
+  }
+
+  async function loadServerBackups(launcherId: string, manifestName: string) {
+    try {
+      const list = await invoke<ServerBackup[]>("list_server_backups", {
+        manifestName,
+      });
+      setServerBackups((prev) => ({ ...prev, [launcherId]: list }));
+    } catch (e) {
+      setServerBackups((prev) => ({ ...prev, [launcherId]: [] }));
+      setStatus(launcherId, `Server: ${e}`);
+    }
+  }
+
+  async function restoreFromServer(launcherId: string, backupId: string) {
+    setConfirmKey(null);
+    setBusyId(launcherId);
+    setStatus(launcherId, "Lade vom Server und stelle wieder her …");
+    try {
+      const message = await invoke<string>("restore_server_backup", {
+        launcherId,
+        backupId,
+      });
+      setStatus(launcherId, message);
+      await loadBackups(launcherId);
+    } catch (e) {
+      setStatus(launcherId, `Fehler: ${e}`);
+    } finally {
+      setBusyId(null);
+    }
   }
 
   async function testServer() {
@@ -152,6 +201,10 @@ function App() {
       const message = await invoke<string>("backup_game", { launcherId });
       setStatus(launcherId, message);
       await loadBackups(launcherId);
+      const entry = scanned.find((s) => s.game.launcherId === launcherId);
+      if (entry && serverBackups[launcherId]) {
+        await loadServerBackups(launcherId, entry.manifestName);
+      }
     } catch (e) {
       setStatus(launcherId, `Fehler: ${e}`);
     } finally {
@@ -326,6 +379,58 @@ function App() {
                   </ul>
                 )}
               </details>
+              {pairing?.paired && (
+                <details
+                  onToggle={(e) => {
+                    if (e.currentTarget.open && !serverBackups[id])
+                      loadServerBackups(id, entry.manifestName);
+                  }}
+                >
+                  <summary>
+                    Server-Backups
+                    {serverBackups[id] ? ` (${serverBackups[id].length})` : ""}
+                  </summary>
+                  {!serverBackups[id] && <small>Lade …</small>}
+                  {serverBackups[id] && serverBackups[id].length === 0 && (
+                    <small>Keine Backups auf dem Server.</small>
+                  )}
+                  {serverBackups[id] && serverBackups[id].length > 0 && (
+                    <ul>
+                      {serverBackups[id].map((b) => (
+                        <li key={b.id}>
+                          <small>
+                            {formatDate(b.createdAt)} – {b.deviceName},{" "}
+                            {reasonLabels[b.reason] ?? b.reason}, {b.fileCount}{" "}
+                            Dateien, {formatSize(b.sizeBytes)}
+                          </small>{" "}
+                          {confirmKey === `${id}/server/${b.id}` ? (
+                            <>
+                              <button
+                                onClick={() => restoreFromServer(id, b.id)}
+                                disabled={busyId !== null}
+                              >
+                                Ja, überschreiben
+                              </button>{" "}
+                              <button onClick={() => setConfirmKey(null)}>
+                                Abbrechen
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                setConfirmKey(`${id}/server/${b.id}`)
+                              }
+                              disabled={busyId !== null}
+                            >
+                              Wiederherstellen
+                            </button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </details>
+              )}
             </li>
           );
         })}
