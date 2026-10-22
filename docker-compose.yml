@@ -6,7 +6,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - ADMIN_KEY= ${ADMIN_KEY:?ADMIN_KEY muss gesetzt sein}
+      - ADMIN_KEY=${ADMIN_KEY:?ADMIN_KEY muss gesetzt sein}
     volumes:
       - savegame-data:/data
 
