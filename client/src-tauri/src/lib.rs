@@ -3,16 +3,76 @@ mod manifest;
 mod scan;
 mod paths;
 mod backup;
+mod config;
+mod credentials;
 use tauri::Manager;
+mod server;
 
 use launchers::Game;
 use std::path::Path;
 use std::path::PathBuf;
+use serde::Serialize;
+
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PairingStatus {
+    server_url: Option<String>,
+    device_name: Option<String>,
+    paired: bool,
+}
+
+#[tauri::command]
+fn get_pairing_status(app: tauri::AppHandle) -> PairingStatus {
+    let config = config::load(&app);
+    PairingStatus { 
+        server_url: config.server_url,
+        device_name: config.device_name, 
+        paired: config.device_id.is_some() && credentials::load_token().is_some(),
+    }
+}
+
+#[tauri::command]
+async fn pair_device(
+    app: tauri::AppHandle,
+    url: String,
+    code: String,
+    device_name: String,
+) -> Result<PairingStatus, String> {
+    let url = server::normalize_url(&url)?;
+    let result = server::claim(&url, code.trim(), device_name.trim()).await?;
+
+    credentials::save_token(&result.token)?;
+    config::save(
+        &app, 
+        &config::AppConfig {
+            server_url: Some(url),
+            device_id: Some(result.device_id),
+            device_name: Some(result.device_name)
+        }
+    )?;
+
+    Ok(get_pairing_status(app))
+}
+
+#[tauri::command]
+fn unpair_device(app: tauri::AppHandle) -> Result<PairingStatus, String> {
+    credentials::delete_token()?;
+    config::save(&app, &config::AppConfig::default())?;
+    Ok(get_pairing_status(app))
+}
+
 
 #[tauri::command]
 fn get_installed_games() -> Result<Vec<Game>, String> {
     launchers::steam::list_games()
         .map_err(|e| format!("Steam-Spiele konnten nicht gelesen werden: {e}"))
+}
+
+#[tauri::command]
+async fn test_server(url: String) -> Result<server::Health, String> {
+    let url = server::normalize_url(&url)?;
+    server::check_health(&url).await
 }
 
 fn backup_root(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -113,7 +173,7 @@ fn run_scan() -> Result<Vec<scan::ScannedGame>, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![get_installed_games, scan_games, backup_game, list_backups, restore_backup])
+        .invoke_handler(tauri::generate_handler![get_installed_games, scan_games, backup_game, list_backups, restore_backup, test_server, get_pairing_status, pair_device, unpair_device])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
