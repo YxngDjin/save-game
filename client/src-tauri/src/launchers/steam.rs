@@ -36,8 +36,11 @@ pub fn steam_root() -> Result<std::path::PathBuf, steamlocate::Error> {
 }
 
 pub fn is_running(app_id: u32) -> bool {
+    running_app_id() == app_id
+}
+
+pub fn running_app_id() -> u32 {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let Ok(key) = hkcu.open_subkey(r"Software\Valve\Steam") else { return false };
-    let running: u32 = key.get_value("RunningAppID").unwrap_or(0);
-    running == app_id
+    let Ok(key) = hkcu.open_subkey(r"Software\Valve\Steam") else { return 0 };
+    key.get_value("RunningAppID").unwrap_or(0)
 }

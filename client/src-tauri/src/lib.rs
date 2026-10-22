@@ -6,9 +6,10 @@ mod backup;
 mod config;
 mod credentials;
 mod server;
+mod watcher;
 
 use std::path::Path;
-use tauri::Manager;
+use tauri::{Manager};
 use launchers::Game;
 use std::path::PathBuf;
 use serde::Serialize;
@@ -145,26 +146,9 @@ async fn scan_games(app: tauri::AppHandle) -> Result<Vec<scan::ScannedGame>, Str
 
 #[tauri::command]
 async fn backup_game(app: tauri::AppHandle, launcher_id: String) -> Result<String, String> {
-    let scanned = run_scan(&app).await?;
-    let game = scanned
-        .iter()
-        .find(|s| s.game.launcher_id == launcher_id)
-        .ok_or("Spiel nicht gefunden")?;
-
-    if game.files.is_empty() {
-        return Err("Keine Dateien zum Sichern gefunden".to_string());
-    }
-
-        let zip_path = backup::create_backup(game, &backup_root(&app)?, "manual")?;
-
-    let upload = match try_upload(&app, &zip_path).await {
-        Ok(Some(response)) if response.duplicate => "Server hat diesen Stand schon.".to_string(),
-        Ok(Some(_)) => "Auf den Server hochgeladen.".to_string(),
-        Ok(None) => "Nicht gekoppelt, nur lokal gesichert.".to_string(),
-        Err(e) => format!("Upload fehlgeschlagen: {e}"),
-    };
-
-    Ok(format!("Gesichert: {}. {upload}", zip_path.display()))
+    perform_backup(&app, &launcher_id, "manual")
+        .await?
+        .ok_or_else(|| "Keine Dateien zum Sichern gefunden".to_string())
 }
 
 fn server_session(app: &tauri::AppHandle) -> Result<(String, String), String> {
@@ -219,6 +203,26 @@ async fn try_upload(app: &tauri::AppHandle, zip_path: &Path) -> Result<Option<se
     server::upload_backup(&url, &token, zip_path, &info).await.map(Some) 
 }
 
+async fn perform_backup(app: &tauri::AppHandle, launcher_id: &str, reason: &str) -> Result<Option<String>, String> {
+    let scanned = run_scan(app).await?;
+    let Some(game) = scanned.iter().find(|s| s.game.launcher_id == launcher_id) else {
+        return Ok(None);
+    };
+    if game.files.is_empty() {
+        return Ok(None);
+    }
+
+    let zip_path = backup::create_backup(game, &backup_root(app)?, reason)?;
+
+    let upload = match try_upload(app, &zip_path).await {
+        Ok(Some(response)) if response.duplicate => "Server hat diesen Stand schon.".to_string(),
+        Ok(Some(_)) => "Auf den Server hochgeladen.".to_string(),
+        Ok(None) => "Nicht gekoppelt, nur lokal gesichert.".to_string(),
+        Err(e) => format!("Upload fehlgeschlagen: {e}"),
+    };
+
+    Ok(Some(format!("Gesichert: {}. {upload}", zip_path.display())))
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -230,8 +234,10 @@ pub fn run() {
             tauri::async_runtime::spawn(async move {
                 let _ = manifest::ensure(&handle).await;
             });
+
+            tauri::async_runtime::spawn(watcher::watch_steam(app.handle().clone()));
             Ok(())
-        }) 
+        })
         .invoke_handler(tauri::generate_handler![get_installed_games, scan_games, backup_game, list_backups, restore_backup, test_server, get_pairing_status, pair_device, unpair_device, list_server_backups, restore_server_backup])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
