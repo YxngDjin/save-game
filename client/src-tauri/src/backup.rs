@@ -1,19 +1,19 @@
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
-use std::path::PathBuf;
-use walkdir::WalkDir;
 use std::error::Error;
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::Path;
+use std::path::PathBuf;
+use walkdir::WalkDir;
+use zip::ZipArchive;
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
-use zip::ZipArchive;
-use sha2::{Digest, Sha256};
 
-use crate::scan::ScannedGame;
 use crate::paths;
 use crate::scan::SaveLocation;
+use crate::scan::ScannedGame;
 
 const IGNORED_FILES: [&str; 1] = ["steam_autocloud.vdf"];
 
@@ -24,8 +24,6 @@ pub struct BackupFile {
     pub portable: String,
     pub size: u64,
 }
-
-
 
 pub fn collect_files(locations: &[SaveLocation], ctx: &paths::Context) -> Vec<BackupFile> {
     let mut files = BTreeMap::new();
@@ -48,9 +46,18 @@ pub fn collect_files(locations: &[SaveLocation], ctx: &paths::Context) -> Vec<Ba
                 if files.contains_key(&path) {
                     continue;
                 }
-                let Some(portable) = paths::to_portable(&path, ctx) else { continue };
+                let Some(portable) = paths::to_portable(&path, ctx) else {
+                    continue;
+                };
 
-                files.insert(path.clone(), BackupFile { path, portable, size });
+                files.insert(
+                    path.clone(),
+                    BackupFile {
+                        path,
+                        portable,
+                        size,
+                    },
+                );
             }
         }
     }
@@ -92,7 +99,11 @@ fn file_options() -> SimpleFileOptions {
     SimpleFileOptions::default().compression_method(CompressionMethod::Deflated)
 }
 
-pub fn create_backup(scanned: &ScannedGame, backup_root: &Path, reason: &str) -> Result<PathBuf, String> {
+pub fn create_backup(
+    scanned: &ScannedGame,
+    backup_root: &Path,
+    reason: &str,
+) -> Result<PathBuf, String> {
     let now = chrono::Local::now();
     let dir = backup_root.join(&scanned.game.launcher_id);
     fs::create_dir_all(&dir)
@@ -108,7 +119,12 @@ pub fn create_backup(scanned: &ScannedGame, backup_root: &Path, reason: &str) ->
     Ok(zip_path)
 }
 
-fn write_zip(zip_path: &Path, scanned: &ScannedGame, created_at: &str, reason: &str) -> Result<(), Box<dyn Error>> {
+fn write_zip(
+    zip_path: &Path,
+    scanned: &ScannedGame,
+    created_at: &str,
+    reason: &str,
+) -> Result<(), Box<dyn Error>> {
     let mut zip = ZipWriter::new(File::create(zip_path)?);
     let mut archived = Vec::new();
 
@@ -122,7 +138,7 @@ fn write_zip(zip_path: &Path, scanned: &ScannedGame, created_at: &str, reason: &
             portable: file.portable.clone(),
             archive_path,
             size: file.size,
-            sha256
+            sha256,
         });
     }
 
@@ -161,7 +177,9 @@ pub fn read_info(zip_path: &Path) -> Result<BackupInfo, Box<dyn Error>> {
 
 pub fn list_backups(backup_root: &Path, launcher_id: &str) -> Vec<BackupSummary> {
     let dir = backup_root.join(launcher_id);
-    let Ok(entries) = fs::read_dir(&dir) else { return Vec::new() };
+    let Ok(entries) = fs::read_dir(&dir) else {
+        return Vec::new();
+    };
 
     let mut backups: Vec<BackupSummary> = entries
         .filter_map(Result::ok)
@@ -225,7 +243,7 @@ fn copy_and_hash(source: &mut impl Read, dest: &mut impl Write) -> io::Result<St
 
 fn content_hash(files: &[ArchivedFile]) -> String {
     let mut sorted: Vec<&ArchivedFile> = files.iter().collect();
-    sorted.sort_by(|a, b | a.portable.cmp(&b.portable));
+    sorted.sort_by(|a, b| a.portable.cmp(&b.portable));
 
     let mut hasher = Sha256::new();
     for file in sorted {

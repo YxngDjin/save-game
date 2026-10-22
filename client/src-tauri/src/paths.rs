@@ -1,4 +1,4 @@
-use std::{path::{Path, Component, PathBuf}};
+use std::path::{Component, Path, PathBuf};
 
 pub struct Context<'a> {
     pub base: &'a Path,
@@ -72,7 +72,10 @@ pub fn from_portable(protable: &str, ctx: &Context) -> Option<PathBuf> {
     };
 
     let rest = Path::new(rest);
-    if rest.components().any(|c| !matches!(c, Component::Normal(_))) {
+    if rest
+        .components()
+        .any(|c| !matches!(c, Component::Normal(_)))
+    {
         return None;
     }
 

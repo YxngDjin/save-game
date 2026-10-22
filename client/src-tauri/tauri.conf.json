@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "visible": false,
         "title": "client",
         "width": 800,
         "height": 600

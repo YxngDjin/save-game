@@ -20,8 +20,12 @@ fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 pub fn load(app: &AppHandle) -> AppConfig {
-    let Ok(path) = config_path(app) else { return AppConfig::default() };
-    let Ok(text) = fs::read_to_string(path) else { return AppConfig::default() };
+    let Ok(path) = config_path(app) else {
+        return AppConfig::default();
+    };
+    let Ok(text) = fs::read_to_string(path) else {
+        return AppConfig::default();
+    };
     serde_json::from_str(&text).unwrap_or_default()
 }
 

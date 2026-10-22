@@ -1,9 +1,9 @@
-use serde::{Deserialize, Serialize};
-use std::time::Duration;
-use serde_json::Value;
 use reqwest::multipart::{Form, Part};
-use std::path::Path;
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::path::Path;
+use std::time::Duration;
 
 use crate::backup::BackupInfo;
 
@@ -69,7 +69,6 @@ pub async fn claim(base_url: &str, code: &str, device_name: &str) -> Result<Clai
         .map_err(|e| format!("Unerwartete Antwort vom Server: {e}"))
 }
 
-
 pub fn normalize_url(url: &str) -> Result<String, String> {
     let url = url.trim().trim_end_matches('/');
     if !(url.starts_with("http://") || url.starts_with("https://")) {
@@ -122,7 +121,8 @@ pub async fn upload_backup(
         return Err("Dieses Backup ist zu alt für den Upload".to_string());
     }
 
-    let bytes = std::fs::read(zip_path).map_err(|e| format!("ZIP konnte nicht gelesen werden: {e}"))?;
+    let bytes =
+        std::fs::read(zip_path).map_err(|e| format!("ZIP konnte nicht gelesen werden: {e}"))?;
     let file_name = zip_path
         .file_name()
         .and_then(|name| name.to_str())
@@ -142,7 +142,10 @@ pub async fn upload_backup(
         .text("launcherId", info.launcher_id.clone())
         .text("reason", info.reason.clone())
         .text("fileCount", info.files.len().to_string())
-        .text("sizeBytes", info.files.iter().map(|f| f.size).sum::<u64>().to_string())
+        .text(
+            "sizeBytes",
+            info.files.iter().map(|f| f.size).sum::<u64>().to_string(),
+        )
         .text("createdAt", info.created_at.clone())
         .part("file", file);
 
@@ -183,7 +186,11 @@ pub struct ServerBackup {
     pub content_hash: String,
 }
 
-async fn get_json<T: DeserializeOwned>(base_url: &str, token: &str, path: &str) -> Result<T, String> {
+async fn get_json<T: DeserializeOwned>(
+    base_url: &str,
+    token: &str,
+    path: &str,
+) -> Result<T, String> {
     let response = client()?
         .get(format!("{base_url}{path}"))
         .bearer_auth(token)
@@ -201,7 +208,11 @@ async fn get_json<T: DeserializeOwned>(base_url: &str, token: &str, path: &str) 
         .map_err(|e| format!("Unerwartete Antwort vom Server: {e}"))
 }
 
-pub async fn list_backups_for_game(base_url: &str, token: &str, manifest_name: &str) -> Result<Vec<ServerBackup>, String> {
+pub async fn list_backups_for_game(
+    base_url: &str,
+    token: &str,
+    manifest_name: &str,
+) -> Result<Vec<ServerBackup>, String> {
     let games: Vec<ServerGame> = get_json(base_url, token, "/games").await?;
     let Some(game) = games.into_iter().find(|g| g.manifest_name == manifest_name) else {
         return Ok(Vec::new());
@@ -209,7 +220,12 @@ pub async fn list_backups_for_game(base_url: &str, token: &str, manifest_name: &
     get_json(base_url, token, &format!("/games/{}/backups", game.id)).await
 }
 
-pub async fn download_backup(base_url: &str, token: &str, backup_id: &str, target: &Path) -> Result<(), String> {
+pub async fn download_backup(
+    base_url: &str,
+    token: &str,
+    backup_id: &str,
+    target: &Path,
+) -> Result<(), String> {
     let response = client_with_timeout(600)?
         .get(format!("{base_url}/backups/{backup_id}/download"))
         .bearer_auth(token)
@@ -230,6 +246,7 @@ pub async fn download_backup(base_url: &str, token: &str, backup_id: &str, targe
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     let partial = target.with_extension("part");
-    std::fs::write(&partial, &bytes).map_err(|e| format!("ZIP konnte nicht gespeichert werden: {e}"))?;
+    std::fs::write(&partial, &bytes)
+        .map_err(|e| format!("ZIP konnte nicht gespeichert werden: {e}"))?;
     std::fs::rename(&partial, target).map_err(|e| e.to_string())
 }

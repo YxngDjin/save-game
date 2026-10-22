@@ -1,13 +1,14 @@
+use reqwest::StatusCode;
+use reqwest::header::{ETAG, IF_NONE_MATCH};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::Path;
-use reqwest::header::{ETAG, IF_NONE_MATCH};
-use reqwest::StatusCode;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
-const MANIFEST_URL: &str = "https://raw.githubusercontent.com/mtkennerly/ludusavi-manifest/master/data/manifest.yaml";
+const MANIFEST_URL: &str =
+    "https://raw.githubusercontent.com/mtkennerly/ludusavi-manifest/master/data/manifest.yaml";
 
 pub type Manifest = HashMap<String, GameEntry>;
 
@@ -40,8 +41,7 @@ pub struct SteamInfo {
 pub fn load(path: &Path) -> Result<Manifest, String> {
     let text = std::fs::read_to_string(path)
         .map_err(|e| format!("Manifest konnte nicht gelesen werden: {e}"))?;
-    serde_norway::from_str(&text)
-        .map_err(|e| format!("Manifest ist ungültig: {e}"))
+    serde_norway::from_str(&text).map_err(|e| format!("Manifest ist ungültig: {e}"))
 }
 
 impl FileEntry {
