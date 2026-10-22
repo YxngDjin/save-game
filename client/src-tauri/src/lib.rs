@@ -119,7 +119,7 @@ async fn restore_backup(
     let safety = if game.files.is_empty() {
         None
     } else {
-        Some(backup::create_backup(game, &root, "pre-restore")?)
+        Some(backup::create_backup(game, &root, "pre-restore")?.path().to_path_buf())
     };
 
     let steam_root = launchers::steam::steam_root().map_err(|e| e.to_string())?;
@@ -235,7 +235,10 @@ async fn perform_backup(
         return Ok(None);
     }
 
-    let zip_path = backup::create_backup(game, &backup_root(app)?, reason)?;
+        let (zip_path, local) = match backup::create_backup(game, &backup_root(app)?, reason)? {
+        backup::BackupOutcome::Created(path) => (path, "Gesichert"),
+        backup::BackupOutcome::Unchanged(path) => (path, "Keine Änderung seit dem letzten Backup"),
+    };
 
     let upload = match try_upload(app, &zip_path).await {
         Ok(Some(response)) if response.duplicate => "Server hat diesen Stand schon.".to_string(),
@@ -244,7 +247,7 @@ async fn perform_backup(
         Err(e) => format!("Upload fehlgeschlagen: {e}"),
     };
 
-    Ok(Some(format!("Gesichert: {}. {upload}", zip_path.display())))
+    Ok(Some(format!("{local}: {}. {upload}", zip_path.display())))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
