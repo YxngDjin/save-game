@@ -68,6 +68,10 @@ pub struct BackupInfo {
     #[serde(default)]
     pub content_hash: String,
     pub files: Vec<ArchivedFile>,
+    #[serde(default)]
+    pub manifest_name: String,
+    #[serde(default)]
+    pub reason: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -88,7 +92,7 @@ fn file_options() -> SimpleFileOptions {
     SimpleFileOptions::default().compression_method(CompressionMethod::Deflated)
 }
 
-pub fn create_backup(scanned: &ScannedGame, backup_root: &Path) -> Result<PathBuf, String> {
+pub fn create_backup(scanned: &ScannedGame, backup_root: &Path, reason: &str) -> Result<PathBuf, String> {
     let now = chrono::Local::now();
     let dir = backup_root.join(&scanned.game.launcher_id);
     fs::create_dir_all(&dir)
@@ -96,7 +100,7 @@ pub fn create_backup(scanned: &ScannedGame, backup_root: &Path) -> Result<PathBu
 
     let zip_path = dir.join(format!("{}.zip", now.format("%Y-%m-%d_%H-%M-%S")));
 
-    if let Err(e) = write_zip(&zip_path, scanned, &now.to_rfc3339()) {
+    if let Err(e) = write_zip(&zip_path, scanned, &now.to_rfc3339(), reason) {
         let _ = fs::remove_file(&zip_path);
         return Err(format!("Backup fehlgeschlagen: {e}"));
     }
@@ -104,7 +108,7 @@ pub fn create_backup(scanned: &ScannedGame, backup_root: &Path) -> Result<PathBu
     Ok(zip_path)
 }
 
-fn write_zip(zip_path: &Path, scanned: &ScannedGame, created_at: &str) -> Result<(), Box<dyn Error>> {
+fn write_zip(zip_path: &Path, scanned: &ScannedGame, created_at: &str, reason: &str) -> Result<(), Box<dyn Error>> {
     let mut zip = ZipWriter::new(File::create(zip_path)?);
     let mut archived = Vec::new();
 
@@ -129,6 +133,8 @@ fn write_zip(zip_path: &Path, scanned: &ScannedGame, created_at: &str) -> Result
         created_at: created_at.to_string(),
         content_hash: content_hash(&archived),
         files: archived,
+        manifest_name: scanned.manifest_name.clone(),
+        reason: reason.to_string(),
     };
 
     zip.start_file("backup.json", file_options())?;

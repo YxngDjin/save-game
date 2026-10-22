@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use serde_json::Value;
+use reqwest::multipart::{Form, Part};
+use std::path::Path;
+
+use crate::backup::BackupInfo;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Health {
@@ -73,11 +77,15 @@ pub fn normalize_url(url: &str) -> Result<String, String> {
     Ok(url.to_string())
 }
 
-fn client() -> Result<reqwest::Client, String> {
+fn client_with_timeout(seconds: u64) -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(seconds))
         .build()
         .map_err(|e| e.to_string())
+}
+
+fn client() -> Result<reqwest::Client, String> {
+    client_with_timeout(10)
 }
 
 pub async fn check_health(base_url: &str) -> Result<Health, String> {
@@ -93,6 +101,64 @@ pub async fn check_health(base_url: &str) -> Result<Health, String> {
 
     response
         .json::<Health>()
+        .await
+        .map_err(|e| format!("Unerwartete Antwort vom Server: {e}"))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UploadResponse {
+    pub duplicate: bool,
+}
+
+pub async fn upload_backup(
+    base_url: &str,
+    token: &str,
+    zip_path: &Path,
+    info: &BackupInfo,
+) -> Result<UploadResponse, String> {
+    if info.manifest_name.is_empty() || info.content_hash.is_empty() {
+        return Err("Dieses Backup ist zu alt für den Upload".to_string());
+    }
+
+    let bytes = std::fs::read(zip_path).map_err(|e| format!("ZIP konnte nicht gelesen werden: {e}"))?;
+    let file_name = zip_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("backup.zip")
+        .to_string();
+
+    let file = Part::bytes(bytes)
+        .file_name(file_name)
+        .mime_str("application/zip")
+        .map_err(|e| e.to_string())?;
+
+    let form = Form::new()
+        .text("manifestName", info.manifest_name.clone())
+        .text("displayName", info.game_name.clone())
+        .text("contentHash", info.content_hash.clone())
+        .text("launcher", info.launcher.clone())
+        .text("launcherId", info.launcher_id.clone())
+        .text("reason", info.reason.clone())
+        .text("fileCount", info.files.len().to_string())
+        .text("sizeBytes", info.files.iter().map(|f| f.size).sum::<u64>().to_string())
+        .text("createdAt", info.created_at.clone())
+        .part("file", file);
+
+    let response = client_with_timeout(600)?
+        .post(format!("{base_url}/backups"))
+        .bearer_auth(token)
+        .multipart(form)
+        .send()
+        .await
+        .map_err(|e| format!("Server nicht erreichbar: {e}"))?;
+
+    if !response.status().is_success() {
+        return Err(error_message(response).await);
+    }
+
+    response
+        .json::<UploadResponse>()
         .await
         .map_err(|e| format!("Unerwartete Antwort vom Server: {e}"))
 }
