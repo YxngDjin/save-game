@@ -1,0 +1,14 @@
+services:
+  savegame-server:
+    build: ./server
+    container_name: savegame-server
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - ADMIN_KEY= ${ADMIN_KEY:?ADMIN_KEY muss gesetzt sein}
+    volumes:
+      - savegame-data:/data
+
+volumes:
+  savegame-data:
