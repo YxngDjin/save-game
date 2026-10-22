@@ -5,11 +5,10 @@ on:
     branches: [main]
     paths: ["client/**", ".github/workflows/client.yml"]
   pull_request:
-    paths: ["client/**", ".github/workflows/client.yml"]
-
+    
 jobs:
   build:
-    name: Build und Prüfungen
+    name: Client – Build
     runs-on: windows-latest
     defaults:
       run:
