@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
+import { listen } from "@tauri-apps/api/event";
+
+interface AutoBackupEvent {
+  launcherId: string;
+  message: string;
+}
 
 interface Game {
   name: string;
@@ -227,6 +233,17 @@ function App() {
   useEffect(() => {
     scan();
     invoke<PairingStatus>("get_pairing_status").then(setPairing);
+  }, []);
+
+  useEffect(() => {
+    const unlisten = listen<AutoBackupEvent>("auto-backup", (event) => {
+      const { launcherId, message } = event.payload;
+      setStatus(launcherId, `Automatisch: ${message}`);
+      loadBackups(launcherId)
+    });
+    return () => {
+      unlisten.then((stop) => stop())
+    }
   }, []);
 
   const withFiles = scanned.filter((entry) => entry.files.length > 0).length;
