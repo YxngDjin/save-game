@@ -1,6 +1,6 @@
-use std::path::{Path, PathBuf};
 use crate::{backup, paths};
 use serde::Serialize;
+use std::path::{Path, PathBuf};
 
 use crate::launchers::Game;
 use crate::manifest::{self, Manifest};
@@ -24,14 +24,24 @@ pub struct ScannedGame {
     pub total_size: u64,
 }
 
-pub fn match_steam_games(games: Vec<Game>, manifest: &Manifest, steam_root: &Path) -> Vec<ScannedGame> {
+pub fn match_steam_games(
+    games: Vec<Game>,
+    manifest: &Manifest,
+    steam_root: &Path,
+) -> Vec<ScannedGame> {
     let index = manifest::steam_index(manifest);
     let mut result = Vec::new();
 
     for game in games {
-        let Ok(app_id) = game.launcher_id.parse::<u32>() else { continue };
-        let Some(name) = index.get(&app_id) else { continue };
-        let Some(entry) = manifest.get(*name) else { continue };
+        let Ok(app_id) = game.launcher_id.parse::<u32>() else {
+            continue;
+        };
+        let Some(name) = index.get(&app_id) else {
+            continue;
+        };
+        let Some(entry) = manifest.get(*name) else {
+            continue;
+        };
 
         let ctx = paths::Context {
             base: &game.install_dir,

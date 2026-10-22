@@ -39,6 +39,12 @@ pub async fn watch_steam(app: AppHandle) {
             Err(e) => format!("Automatisches Backup fehlgeschlagen: {e}"),
         };
 
-        let _ = app.emit("auto-backup", AutoBackupEvent { launcher_id, message });
+        let _ = app.emit(
+            "auto-backup",
+            AutoBackupEvent {
+                launcher_id,
+                message,
+            },
+        );
     }
 }

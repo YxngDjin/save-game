@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import { listen } from "@tauri-apps/api/event";
+import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 
 interface AutoBackupEvent {
   launcherId: string;
@@ -98,6 +99,7 @@ function App() {
   const [serverBackups, setServerBackups] = useState<
     Record<string, ServerBackup[]>
   >({});
+  const [autostart, setAutostart] = useState(false);
 
   function setStatus(launcherId: string, text: string) {
     setBackupStatus((prev) => ({ ...prev, [launcherId]: text }));
@@ -231,6 +233,7 @@ function App() {
   }
 
   useEffect(() => {
+    isEnabled().then(setAutostart);
     scan();
     invoke<PairingStatus>("get_pairing_status").then(setPairing);
   }, []);
@@ -239,12 +242,21 @@ function App() {
     const unlisten = listen<AutoBackupEvent>("auto-backup", (event) => {
       const { launcherId, message } = event.payload;
       setStatus(launcherId, `Automatisch: ${message}`);
-      loadBackups(launcherId)
+      loadBackups(launcherId);
     });
     return () => {
-      unlisten.then((stop) => stop())
-    }
+      unlisten.then((stop) => stop());
+    };
   }, []);
+
+  async function toggleAutostart(enabled: boolean) {
+    if (enabled) {
+      await enable();
+    } else {
+      await disable();
+    }
+    setAutostart(await isEnabled());
+  }
 
   const withFiles = scanned.filter((entry) => entry.files.length > 0).length;
 
@@ -297,6 +309,17 @@ function App() {
           </div>
         )}
         {serverStatus && <p>{serverStatus}</p>}
+      </section>
+      <section style={{ marginBottom: "1.5rem" }}>
+        <h2>Automatik</h2>
+        <label>
+          <input
+            type="checkbox"
+            checked={autostart}
+            onChange={(e) => toggleAutostart(e.currentTarget.checked)}
+          />{" "}
+          Mit Windows starten (im Infobereich)
+        </label>
       </section>
       <p>Davon mit gefundenen Dateien: {withFiles}</p>
 

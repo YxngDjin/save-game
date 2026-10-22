@@ -1,6 +1,6 @@
 use super::Game;
-use winreg::enums::HKEY_CURRENT_USER;
 use winreg::RegKey;
+use winreg::enums::HKEY_CURRENT_USER;
 
 pub fn list_games() -> Result<Vec<Game>, steamlocate::Error> {
     let steam_dir = steamlocate::locate()?;
@@ -21,7 +21,9 @@ pub fn list_games() -> Result<Vec<Game>, steamlocate::Error> {
             games.push(Game {
                 launcher: "Steam".to_string(),
                 launcher_id: app.app_id.to_string(),
-                name: app.name.unwrap_or_else(|| format!("Unbekannt ({})", app.app_id)),
+                name: app
+                    .name
+                    .unwrap_or_else(|| format!("Unbekannt ({})", app.app_id)),
                 install_dir,
             });
         }
@@ -41,6 +43,8 @@ pub fn is_running(app_id: u32) -> bool {
 
 pub fn running_app_id() -> u32 {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let Ok(key) = hkcu.open_subkey(r"Software\Valve\Steam") else { return 0 };
+    let Ok(key) = hkcu.open_subkey(r"Software\Valve\Steam") else {
+        return 0;
+    };
     key.get_value("RunningAppID").unwrap_or(0)
 }
