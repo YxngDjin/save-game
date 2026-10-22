@@ -78,7 +78,7 @@ pub fn normalize_url(url: &str) -> Result<String, String> {
     Ok(url.to_string())
 }
 
-fn client_with_timeout(seconds: u64) -> Result<reqwest::Client, String> {
+pub fn client_with_timeout(seconds: u64) -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
         .timeout(Duration::from_secs(seconds))
         .build()

@@ -107,7 +107,7 @@ async fn restore_backup(app: tauri::AppHandle, launcher_id: String, file_name: S
          return Err("Dieses Backup gehört zu einem anderen Spiel".to_string());
     }
 
-    let scanned = run_scan()?;
+    let scanned = run_scan(&app).await?;
     let game = scanned
         .iter()
         .find(|s| s.game.launcher_id == launcher_id)
@@ -139,13 +139,13 @@ async fn list_backups(app: tauri::AppHandle, launcher_id: String) -> Result<Vec<
 }
 
 #[tauri::command]
-async fn scan_games() -> Result<Vec<scan::ScannedGame>, String> {
-    run_scan()
+async fn scan_games(app: tauri::AppHandle) -> Result<Vec<scan::ScannedGame>, String> {
+    run_scan(&app).await
 }
 
 #[tauri::command]
 async fn backup_game(app: tauri::AppHandle, launcher_id: String) -> Result<String, String> {
-    let scanned = run_scan()?;
+    let scanned = run_scan(&app).await?;
     let game = scanned
         .iter()
         .find(|s| s.game.launcher_id == launcher_id)
@@ -200,8 +200,8 @@ async fn restore_server_backup(app: tauri::AppHandle, launcher_id: String, backu
     restore_backup(app, launcher_id, file_name).await
 }
 
-fn run_scan() -> Result<Vec<scan::ScannedGame>, String> {
-    let manifest = manifest::load(Path::new(r"C:\Users\derde\Documents\SaveGame\manifest.yaml"))?;
+async fn run_scan(app: &tauri::AppHandle) -> Result<Vec<scan::ScannedGame>, String> {
+    let manifest = manifest::ensure(app).await?;
     let games = launchers::steam::list_games()
         .map_err(|e| format!("Steam-Spiele konnten nicht gelesen werden: {e}"))?;
     let root = launchers::steam::steam_root()
@@ -224,6 +224,14 @@ async fn try_upload(app: &tauri::AppHandle, zip_path: &Path) -> Result<Option<se
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .manage(manifest::ManifestState::default())
+        .setup(|app| {
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let _ = manifest::ensure(&handle).await;
+            });
+            Ok(())
+        }) 
         .invoke_handler(tauri::generate_handler![get_installed_games, scan_games, backup_game, list_backups, restore_backup, test_server, get_pairing_status, pair_device, unpair_device, list_server_backups, restore_server_backup])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
