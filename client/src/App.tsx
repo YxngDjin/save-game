@@ -149,8 +149,8 @@ function App() {
     setBusyId(launcherId);
     setStatus(launcherId, "Sichere …");
     try {
-      const path = await invoke<string>("backup_game", { launcherId });
-      setStatus(launcherId, `Gesichert: ${path}`);
+      const message = await invoke<string>("backup_game", { launcherId });
+      setStatus(launcherId, message);
       await loadBackups(launcherId);
     } catch (e) {
       setStatus(launcherId, `Fehler: ${e}`);

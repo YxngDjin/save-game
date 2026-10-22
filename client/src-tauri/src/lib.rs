@@ -5,13 +5,14 @@ mod paths;
 mod backup;
 mod config;
 mod credentials;
-use tauri::Manager;
 mod server;
 
-use launchers::Game;
 use std::path::Path;
+use tauri::Manager;
+use launchers::Game;
 use std::path::PathBuf;
 use serde::Serialize;
+
 
 
 #[derive(Serialize)]
@@ -115,7 +116,7 @@ async fn restore_backup(app: tauri::AppHandle, launcher_id: String, file_name: S
     let safety = if game.files.is_empty() {
         None
     } else {
-        Some(backup::create_backup(game, &root)?)
+        Some(backup::create_backup(game, &root, "pre-restore")?)
     };
 
     let steam_root = launchers::steam::steam_root().map_err(|e| e.to_string())?;
@@ -154,9 +155,16 @@ async fn backup_game(app: tauri::AppHandle, launcher_id: String) -> Result<Strin
         return Err("Keine Dateien zum Sichern gefunden".to_string());
     }
 
-    let zip_path = backup::create_backup(game, &backup_root(&app)?)?;
+        let zip_path = backup::create_backup(game, &backup_root(&app)?, "manual")?;
 
-    Ok(zip_path.display().to_string())
+    let upload = match try_upload(&app, &zip_path).await {
+        Ok(Some(response)) if response.duplicate => "Server hat diesen Stand schon.".to_string(),
+        Ok(Some(_)) => "Auf den Server hochgeladen.".to_string(),
+        Ok(None) => "Nicht gekoppelt, nur lokal gesichert.".to_string(),
+        Err(e) => format!("Upload fehlgeschlagen: {e}"),
+    };
+
+    Ok(format!("Gesichert: {}. {upload}", zip_path.display()))
 }
 
 fn run_scan() -> Result<Vec<scan::ScannedGame>, String> {
@@ -166,6 +174,16 @@ fn run_scan() -> Result<Vec<scan::ScannedGame>, String> {
     let root = launchers::steam::steam_root()
         .map_err(|e| format!("Steam nicht gefunden: {e}"))?;
     Ok(scan::match_steam_games(games, &manifest, &root))
+}
+
+async fn try_upload(app: &tauri::AppHandle, zip_path: &Path) -> Result<Option<server::UploadResponse>, String> {
+    let config = config::load(app);
+    let (Some(url), Some(token)) = (config.server_url, credentials::load_token()) else {
+        return Ok(None);
+    };
+
+    let info = backup::read_info(zip_path).map_err(|e| format!("Backup ist beschädigt: {e}"))?;
+    server::upload_backup(&url, &token, zip_path, &info).await.map(Some) 
 }
 
 
