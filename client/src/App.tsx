@@ -9,11 +9,24 @@ interface Game {
   installDir: string;
 }
 
+interface PairingStatus {
+  serverUrl: string | null;
+  deviceName: string | null;
+  paired: boolean;
+}
+
 interface SaveLocation {
   rawPath: string;
   tags: string[];
   resolved: string | null;
   found: string[];
+}
+
+interface Health {
+  status: string;
+  devices: number;
+  games: number;
+  backups: number;
 }
 
 interface BackupFile {
@@ -55,9 +68,52 @@ function App() {
   const [backupStatus, setBackupStatus] = useState<Record<string, string>>({});
   const [backups, setBackups] = useState<Record<string, BackupSummary[]>>({});
   const [confirmKey, setConfirmKey] = useState<string | null>(null);
+  const [serverUrl, setServerUrl] = useState("http://localhost:3000");
+  const [serverStatus, setServerStatus] = useState("");
+  const [pairing, setPairing] = useState<PairingStatus | null>(null);
+  const [deviceName, setDeviceName] = useState("Gaming-PC");
+  const [pairCode, setPairCode] = useState("");
 
   function setStatus(launcherId: string, text: string) {
     setBackupStatus((prev) => ({ ...prev, [launcherId]: text }));
+  }
+
+  async function testServer() {
+    setServerStatus("Teste Verbindung …");
+    try {
+      const health = await invoke<Health>("test_server", { url: serverUrl });
+      setServerStatus(
+        `Verbunden: ${health.games} Spiele, ${health.backups} Backups, ${health.devices} Geräte`,
+      );
+    } catch (e) {
+      setServerStatus(`Fehler: ${e}`);
+    }
+  }
+
+  async function pair() {
+    setServerStatus("Kopple …");
+    try {
+      setPairing(
+        await invoke<PairingStatus>("pair_device", {
+          url: serverUrl,
+          code: pairCode,
+          deviceName,
+        }),
+      );
+      setPairCode("");
+      setServerStatus("Erfolgreich gekoppelt");
+    } catch (e) {
+      setServerStatus(`Fehler: ${e}`);
+    }
+  }
+
+  async function unpair() {
+    try {
+      setPairing(await invoke<PairingStatus>("unpair_device"));
+      setServerStatus("Entkoppelt");
+    } catch (e) {
+      setServerStatus(`Fehler: ${e}`);
+    }
   }
 
   async function restore(launcherId: string, fileName: string) {
@@ -117,6 +173,7 @@ function App() {
 
   useEffect(() => {
     scan();
+    invoke<PairingStatus>("get_pairing_status").then(setPairing);
   }, []);
 
   const withFiles = scanned.filter((entry) => entry.files.length > 0).length;
@@ -124,6 +181,53 @@ function App() {
   return (
     <main className="container" style={{ textAlign: "left" }}>
       <h1>Debug: Spiele mit Spielständen ({scanned.length})</h1>
+      <section style={{ marginBottom: "1.5rem" }}>
+        <h2>Server</h2>
+        {pairing?.paired ? (
+          <p>
+            Gekoppelt als <strong>{pairing.deviceName}</strong> mit{" "}
+            {pairing.serverUrl} <button onClick={unpair}>Entkoppeln</button>
+          </p>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.5rem",
+              maxWidth: "24rem",
+            }}
+          >
+            <label>
+              Serveradresse
+              <input
+                value={serverUrl}
+                onChange={(e) => setServerUrl(e.currentTarget.value)}
+              />
+            </label>
+            <button onClick={testServer}>Verbindung testen</button>
+            <label>
+              Gerätename
+              <input
+                value={deviceName}
+                onChange={(e) => setDeviceName(e.currentTarget.value)}
+              />
+            </label>
+            <label>
+              Kopplungscode
+              <input
+                value={pairCode}
+                onChange={(e) => setPairCode(e.currentTarget.value)}
+                placeholder="000000"
+                maxLength={6}
+              />
+            </label>
+            <button onClick={pair} disabled={pairCode.length !== 6}>
+              Koppeln
+            </button>
+          </div>
+        )}
+        {serverStatus && <p>{serverStatus}</p>}
+      </section>
       <p>Davon mit gefundenen Dateien: {withFiles}</p>
 
       <button onClick={scan} disabled={loading}>
