@@ -8,3 +8,4 @@ dist
 .agents
 *.db
 /src/generated/prisma
+*.tsbuildinfo
