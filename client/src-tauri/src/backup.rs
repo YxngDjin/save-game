@@ -25,6 +25,19 @@ pub struct BackupFile {
     pub size: u64,
 }
 
+pub enum  BackupOutcome {
+    Created(PathBuf),
+    Unchanged(PathBuf),
+}
+
+impl BackupOutcome {
+    pub fn path(&self) -> &Path {
+        match self {
+            Self::Created(path) | Self::Unchanged(path) => path,
+        }
+    }
+}
+
 pub fn collect_files(locations: &[SaveLocation], ctx: &paths::Context) -> Vec<BackupFile> {
     let mut files = BTreeMap::new();
 
@@ -99,13 +112,17 @@ fn file_options() -> SimpleFileOptions {
     SimpleFileOptions::default().compression_method(CompressionMethod::Deflated)
 }
 
-pub fn create_backup(
-    scanned: &ScannedGame,
-    backup_root: &Path,
-    reason: &str,
-) -> Result<PathBuf, String> {
-    let now = chrono::Local::now();
+pub fn create_backup(scanned: &ScannedGame, backup_root: &Path, reason: &str) -> Result<BackupOutcome, String> {
     let dir = backup_root.join(&scanned.game.launcher_id);
+
+    let current_hash = hash_files(&scanned.files)?;
+    if let Some(latest) = list_backups(backup_root, &scanned.game.launcher_id).into_iter().next() {
+        if latest.content_hash == current_hash {
+            return Ok(BackupOutcome::Unchanged(dir.join(latest.file_name)));
+        }
+    }
+
+    let now = chrono::Local::now();
     fs::create_dir_all(&dir)
         .map_err(|e| format!("Backup-Ordner konnte nicht angelegt werden: {e}"))?;
 
@@ -116,7 +133,7 @@ pub fn create_backup(
         return Err(format!("Backup fehlgeschlagen: {e}"));
     }
 
-    Ok(zip_path)
+    Ok(BackupOutcome::Created(zip_path))
 }
 
 fn write_zip(
@@ -166,6 +183,7 @@ pub struct BackupSummary {
     pub created_at: String,
     pub file_count: usize,
     pub total_size: u64,
+    pub content_hash: String,
 }
 
 pub fn read_info(zip_path: &Path) -> Result<BackupInfo, Box<dyn Error>> {
@@ -189,6 +207,7 @@ pub fn list_backups(backup_root: &Path, launcher_id: &str) -> Vec<BackupSummary>
             let info = read_info(&path).ok()?;
             Some(BackupSummary {
                 file_name: path.file_name()?.to_string_lossy().to_string(),
+                content_hash: info.content_hash.clone(),
                 created_at: info.created_at,
                 file_count: info.files.len(),
                 total_size: info.files.iter().map(|f| f.size).sum(),
@@ -253,4 +272,20 @@ fn content_hash(files: &[ArchivedFile]) -> String {
         hasher.update([b'\n']);
     }
     hex::encode(hasher.finalize())
+}
+
+fn hash_files(files: &[BackupFile]) -> Result<String, String> {
+    let mut entries = Vec::new();
+    for file in files {
+        let mut source = File::open(&file.path)
+           .map_err(|e| format!("{} konnte nicht gelesen werden: {e}", file.path.display()))?;
+        let sha256 = copy_and_hash(&mut source, &mut io::sink()).map_err(|e| e.to_string())?;
+        entries.push(ArchivedFile {
+            portable: file.portable.clone(),
+            archive_path: String::new(),
+            size: file.size,
+            sha256,
+        });
+    }
+    Ok(content_hash(&entries))
 }
