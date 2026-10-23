@@ -24,3 +24,5 @@ rustc-ice-*.txt
 #.idea/
 
 node_modules
+*/*.tsbuildinfo
+*.tsbuildinfo

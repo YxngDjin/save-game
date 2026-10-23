@@ -9,6 +9,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { DeviceAuthGuard } from './auth/device-auth.guard.js';
 import { PairingModule } from './pairing/pairing.module.js';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { AdminModule } from './admin/admin.module.js';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     BackupsModule,
     GamesModule,
     PairingModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [
