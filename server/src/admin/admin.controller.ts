@@ -22,6 +22,7 @@ import {
   SESSION_LIFETIME_MS,
 } from './admin-session.service.js';
 import { LoginDto } from './dto/login.dto.js';
+import { GamesService } from '../games/games.service.js';
 
 @Public()
 @Controller('admin')
@@ -29,6 +30,7 @@ export class AdminController {
   constructor(
     private readonly sessions: AdminSessionService,
     private readonly adminService: AdminService,
+    private readonly gamesService: GamesService,
   ) {}
 
   @Post('login')
@@ -72,5 +74,17 @@ export class AdminController {
   @UseGuards(AdminGuard)
   revokeDevice(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminService.revokeDevice(id);
+  }
+
+  @Get('games')
+  @UseGuards(AdminGuard)
+  listGames() {
+    return this.gamesService.findAll();
+  }
+
+  @Get('games/:id/backups')
+  @UseGuards(AdminGuard)
+  listGameBackups(@Param('id', ParseUUIDPipe) id: string) {
+    return this.gamesService.findBackups(id);
   }
 }
