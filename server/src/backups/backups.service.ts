@@ -7,16 +7,53 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateBackupDto } from './dto/create-backup.dto.js';
 import { toResponse } from './backup.mapper.js';
 import { createReadStream } from 'node:fs';
+import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class BackupsService {
   private readonly dataDir: string;
+  private readonly logger = new Logger(BackupsService.name);
+  private readonly retentionCount: number;
 
   constructor(
     private readonly prisma: PrismaService,
     config: ConfigService,
   ) {
     this.dataDir = path.resolve(config.getOrThrow<string>('DATA_DIR'));
+
+    const retention = Number(config.get<string>('RETENTION_COUNT') ?? 10);
+    if (!Number.isInteger(retention) || retention < 0) {
+      throw new Error('RETENTION_COUNT muss eine ganze Zahl ab 0 sein');
+    }
+    this.retentionCount = retention;
+  }
+
+  private async prune(gameId: string) {
+    if (this.retentionCount === 0) {
+      return;
+    }
+
+    const outdated = await this.prisma.backup.findMany({
+      where: { gameId },
+      orderBy: { createdAt: 'desc' },
+      skip: this.retentionCount,
+      select: { id: true, storagePath: true },
+    });
+    if (outdated.length === 0) {
+      return;
+    }
+
+    await this.prisma.backup.deleteMany({
+      where: { id: { in: outdated.map((backup) => backup.id) } },
+    });
+    (await Promise.all(
+      outdated.map((backup) =>
+        fs.rm(path.join(this.dataDir, backup.storagePath), { force: true }),
+      ),
+    ),
+      this.logger.log(
+        `${outdated.length} alte Backups für Spiel ${gameId} gelöscht`,
+      ));
   }
 
   async create(
@@ -65,6 +102,11 @@ export class BackupsService {
             createdAt: new Date(dto.createdAt),
           },
         });
+
+        await this.prune(game.id).catch((error) =>
+          this.logger.warn(`Aufräumen fehlgeschlagen: ${error}`),
+        );
+
         return { duplicate: false, backup: toResponse(backup) };
       } catch (error) {
         await fs.rm(target, { force: true });

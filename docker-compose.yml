@@ -8,6 +8,7 @@ services:
     environment:
       - ADMIN_KEY=${ADMIN_KEY:?ADMIN_KEY muss gesetzt sein}
       - TZ=Europe/Berlin
+      - RETENTION_COUNT=${RETENTION_COUNT:-10}
     volumes:
       - savegame-data:/data
 

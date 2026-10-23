@@ -1,5 +1,6 @@
 import { Backup } from '../generated/prisma/client.js';
 
 export function toResponse(backup: Backup) {
-  return { ...backup, sizeBytes: Number(backup.sizeBytes) };
+  const { storagePath: _storagePath, sizeBytes, ...rest } = backup;
+  return { ...rest, sizeBytes: Number(sizeBytes) };
 }
