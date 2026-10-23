@@ -38,7 +38,7 @@ export class DeviceAuthGuard implements CanActivate {
     const device = await this.prisma.device.findUnique({
       where: { tokenHash: hashToken(header.slice('Bearer '.length)) },
     });
-    if (!device) {
+    if (!device || device.revokedAt) {
       throw new UnauthorizedException('Ungültiger Token');
     }
 

@@ -1,9 +1,9 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { PairingService } from './pairing.service.js';
 import { Public } from '../auth/public.decorator.js';
-import { AdminKeyGuard } from '../auth/admin-key.guard.js';
 import { ClaimDto } from './dto/claim.dto.js';
 import { Throttle } from '@nestjs/throttler';
+import { AdminGuard } from '../admin/admin.guard.js';
 
 @Public()
 @Throttle({ default: { limit: 5, ttl: 60_000 } })
@@ -12,7 +12,7 @@ export class PairingController {
   constructor(private readonly pairingService: PairingService) {}
 
   @Post('codes')
-  @UseGuards(AdminKeyGuard)
+  @UseGuards(AdminGuard)
   create() {
     return this.pairingService.createCode();
   }

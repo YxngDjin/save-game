@@ -19,6 +19,7 @@ model Device {
   tokenHash String @unique
   createdAt DateTime @default(now())
   lastSeenAt DateTime @default(now())
+  revokedAt DateTime?
   backups Backup[]
 }
 
