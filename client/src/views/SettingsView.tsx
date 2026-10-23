@@ -58,7 +58,7 @@ const SettingsView = ({ pairing, onPairingChange }: SettingsViewProps) => {
     });
 
   async function toggleAutostart(enabled: boolean) {
-    if (enable) {
+    if (enabled) {
       await enable();
     } else {
       await disable();
