@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+.git
+client
+server/data
+server/*.db
+server/.env
+server/src/generated

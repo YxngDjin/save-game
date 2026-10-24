@@ -36,7 +36,7 @@ export const api = {
   logout: () =>
     request<{ loggedIn: boolean }>("/admin/logout", { method: "POST" }),
   games: () => request<AdminGame[]>("/admin/games"),
-  gamebackups: (id: string) =>
+  gameBackups: (id: string) =>
     request<AdminBackup[]>(`/admin/games/${id}/backups`),
   devices: () => request<AdminDevice[]>("/admin/devices"),
   revokeDevice: (id: string) =>

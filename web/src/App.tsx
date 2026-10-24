@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { api } from "./api";
 import LoginPage from "./LoginPage";
 import { DevicesPage } from "./Devicepage";
+import { GamesPage } from "./GamesPage";
 
 type AuthState = "checking" | "loggedOut" | "loggedIn";
 type Page = "games" | "devices";
 
 function App() {
   const [auth, setAuth] = useState<AuthState>("checking");
-  const [page, setPage] = useState<Page>("devices");
+  const [page, setPage] = useState<Page>("games");
 
   useEffect(() => {
     api
@@ -71,9 +72,7 @@ function App() {
 
       <main className="mx-auto max-w-5xl px-4 py-8">
         {page === "devices" && <DevicesPage />}
-        {page === "games" && (
-          <p className="text-sm text-neutral-500">Kommt in Etappe 3b.</p>
-        )}
+        {page === "games" && <GamesPage />}
       </main>
     </div>
   );

@@ -1,6 +1,8 @@
 services:
   savegame-server:
-    build: ./server
+    build: 
+      context: .
+      dockerfile: server/Dockerfile
     container_name: savegame-server
     restart: unless-stopped
     ports:
