@@ -1,20 +1,30 @@
-#BUILD
+# ---------- Web-App bauen ----------
+FROM node:22-bookworm-slim AS web
+
+WORKDIR /web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+
+COPY web/ ./
+RUN npm run build
+
+# ---------- Server bauen ----------
 FROM node:22-bookworm-slim AS build
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends openssl python3 make g++ \
-    && rm -rf /var/lib/apt/lists/*
+ && apt-get install -y --no-install-recommends openssl python3 make g++ \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY server/package.json server/package-lock.json ./
 RUN npm ci
 
-COPY . .
+COPY server/ ./
 RUN npx prisma generate \
-    && npm run build \
-    && npm prune --omit=dev
+ && npm run build \
+ && npm prune --omit=dev
 
-# ---------- Laufzeit ----------
+ # ---------- Laufzeit ----------
 FROM node:22-bookworm-slim
 
 RUN apt-get update \
@@ -32,6 +42,7 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma7.config.ts ./
+COPY --from=web /web/dist ./public
 
 RUN mkdir -p /data && chown node:node /data
 VOLUME /data
