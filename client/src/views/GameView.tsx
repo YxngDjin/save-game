@@ -96,30 +96,33 @@ const GameView = ({
       />
 
       {tab === "versions" && (
-        <div className="flex flex-wrap items-start gap-5">
-          <section className="flex min-w-0 flex-[3_1_420px] flex-col gap-2">
-            {localBackups === null ? (
-              <p className="text-sm text-muted">Lade …</p>
-            ) : versions.length === 0 ? (
-              <p className="text-sm text-muted">
-                Noch keine Versionen vorhanden.
-              </p>
-            ) : (
-              versions.map((version, index) => (
-                <VersionRow
-                  key={version.key}
-                  version={version}
-                  current={index === 0}
-                  selected={version.key === selected?.key}
-                  onSelect={() => setSelectedKey(version.key)}
-                />
-              ))
-            )}
-          </section>
+        <div className="flex flex-col gap-3">
+          {serverError && <p className="text-sm text-danger">{serverError}</p>}
+          <div className="flex flex-wrap items-start gap-5">
+            <section className="flex min-w-0 flex-[3_1_420px] flex-col gap-2">
+              {localBackups === null ? (
+                <p className="text-sm text-muted">Lade …</p>
+              ) : versions.length === 0 ? (
+                <p className="text-sm text-muted">
+                  Noch keine Versionen vorhanden.
+                </p>
+              ) : (
+                versions.map((version, index) => (
+                  <VersionRow
+                    key={version.key}
+                    version={version}
+                    current={index === 0}
+                    selected={version.key === selected?.key}
+                    onSelect={() => setSelectedKey(version.key)}
+                  />
+                ))
+              )}
+            </section>
 
-          <aside className="flex min-w-0 flex-[2_1_320px] flex-col gap-4 rounded-xl border border-border bg-surface p-5">
-            <p className="text-sm text-muted">Details folgen.</p>
-          </aside>
+            <aside className="flex min-w-0 flex-[2_1_320px] flex-col gap-4 rounded-xl border border-border bg-surface p-5">
+              <p className="text-sm text-muted">Details folgen.</p>
+            </aside>
+          </div>
         </div>
       )}
 
