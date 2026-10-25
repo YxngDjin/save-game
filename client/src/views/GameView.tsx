@@ -18,6 +18,7 @@ interface GameViewProps {
   paired: boolean;
   busy: boolean;
   status?: string;
+  initialVersionKey?: string;
   onBack: () => void;
   onTask: (pending: string, task: () => Promise<string>) => Promise<void>;
 }
@@ -29,12 +30,15 @@ const GameView = ({
   status,
   onBack,
   onTask,
+  initialVersionKey,
 }: GameViewProps) => {
   const id = entry.game.launcherId;
   const [localBackups, setLocalBackups] = useState<BackupSummary[] | null>(
     null,
   );
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(
+    initialVersionKey || null,
+  );
   const [restoreTarget, setRestoreTarget] = useState<Version | null>(null);
   const [serverBackups, setServerBackups] = useState<ServerBackup[] | null>(
     null,

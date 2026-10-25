@@ -10,6 +10,7 @@ import SettingsView from "./views/SettingsView";
 import Navbar from "./components/Navbar";
 import { useTheme } from "./hooks/useTheme";
 import { useServerStatus } from "./hooks/useServerStatus";
+import HistoryView from "./views/HistoryView";
 
 function App() {
   const [search, setSearch] = useState("");
@@ -117,6 +118,7 @@ function App() {
                 <GameView
                   key={entry.game.launcherId}
                   entry={entry}
+                  initialVersionKey={view.versionKey}
                   paired={pairing?.paired ?? false}
                   busy={busyId !== null}
                   status={status[entry.game.launcherId]}
@@ -127,6 +129,15 @@ function App() {
                 />
               );
             })()}
+          {view.name === "history" && (
+            <HistoryView
+              games={games}
+              paired={pairing?.paired ?? false}
+              onOpen={(launcherId, versionKey) =>
+                setView({ name: "game", launcherId, versionKey })
+              }
+            />
+          )}
           {view.name === "settings" && (
             <SettingsView
               pairing={pairing}

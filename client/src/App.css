@@ -62,4 +62,6 @@
 body {
     background-color: var(--bg);
     color: var(--text);
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
 }

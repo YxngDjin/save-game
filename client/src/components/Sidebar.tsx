@@ -2,7 +2,7 @@ import { Clock, Gamepad, Settings } from "lucide-react";
 
 export type View =
   | { name: "games" }
-  | { name: "game"; launcherId: string }
+  | { name: "game"; launcherId: string; versionKey?: string }
   | { name: "history" }
   | { name: "settings" };
 
