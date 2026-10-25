@@ -74,3 +74,9 @@ export interface StorageInfo {
   totalBytes: number;
   backupCount: number;
 }
+
+export interface RunningGame {
+  launcherId: string;
+  name: string;
+  since: number;
+}

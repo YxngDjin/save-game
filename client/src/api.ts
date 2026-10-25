@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
   GameArt,
+  RunningGame,
   StorageInfo,
   type BackupSummary,
   type Health,
@@ -30,4 +31,11 @@ export const api = {
     invoke<GameArt>("get_game_art", { appId: launcherId }),
   getStorageInfo: () => invoke<StorageInfo>("get_storage_info"),
   getSteamLibraries: () => invoke<string[]>("get_steam_libraries"),
+  quitApp: () => invoke<void>("quit_app"),
+  openMainWindow: () => invoke<void>("open_main_window"),
+  backupAll: () => invoke<string>("backup_all"),
+  getRunningGame: () => invoke<RunningGame | null>("get_running_game"),
+  getPausedUntil: () => invoke<number | null>("get_paused_until"),
+  pauseAutomatic: (minutes: number) =>
+    invoke<number | null>("pause_automatic", { minutes }),
 };

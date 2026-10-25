@@ -15,3 +15,9 @@ export const reasonLabels: Record<string, string> = {
   auto: "automatisch",
   "pre-restore": "vor Wiederherstellung",
 };
+
+export const formatTime = (ms: number) =>
+  new Date(ms).toLocaleTimeString("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
