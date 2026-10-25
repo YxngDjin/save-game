@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
   GameArt,
+  StorageInfo,
   type BackupSummary,
   type Health,
   type PairingStatus,
@@ -27,4 +28,6 @@ export const api = {
   unpairDevice: () => invoke<PairingStatus>("unpair_device"),
   getGameArt: (launcherId: string) =>
     invoke<GameArt>("get_game_art", { appId: launcherId }),
+  getStorageInfo: () => invoke<StorageInfo>("get_storage_info"),
+  getSteamLibraries: () => invoke<string[]>("get_steam_libraries"),
 };

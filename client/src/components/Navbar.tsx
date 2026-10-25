@@ -2,14 +2,42 @@ import { Bell, MoonIcon, Save, SunIcon } from "lucide-react";
 import IconButton from "./IconButton";
 import Searchbar from "./Searchbar";
 import type { PairingStatus } from "../types";
+import { type ServerStatus } from "../hooks/useServerStatus";
 
 interface NavbarProps {
   search: string;
   isDark: boolean;
   pairing: PairingStatus | null;
+  serverStatus: ServerStatus;
   onToggleTheme: () => void;
   onSearchChange: (value: string) => void;
 }
+
+const statusStyles: Record<
+  ServerStatus,
+  { pill: string; dot: string; label: string }
+> = {
+  online: {
+    pill: "bg-accent/15 text-accent-text",
+    dot: "bg-accent",
+    label: "Server verbunden",
+  },
+  offline: {
+    pill: "bg-danger/10 text-danger",
+    dot: "bg-danger",
+    label: "Server nicht erreichbar",
+  },
+  checking: {
+    pill: "bg-surface-3 text-muted",
+    dot: "bg-muted animate-pulse",
+    label: "Verbinde …",
+  },
+  unpaired: {
+    pill: "bg-surface-3 text-muted",
+    dot: "bg-muted",
+    label: "Nicht gekoppelt",
+  },
+};
 
 const Navbar = ({
   search,
@@ -17,7 +45,11 @@ const Navbar = ({
   pairing,
   isDark,
   onToggleTheme,
+  serverStatus,
 }: NavbarProps) => {
+  const style = statusStyles[serverStatus];
+  const host = pairing?.serverUrl?.replace(/^https?:\/\//, "");
+
   return (
     <header className="flex w-full border-b border-border items-center px-5 bg-surface justify-between">
       <div className="flex items-center gap-2 py-3">
@@ -32,18 +64,11 @@ const Navbar = ({
       </div>
       <div className="flex items-center gap-2">
         <div
-          className={`h-9 px-3 items-center gap-2 flex rounded-full ${pairing?.paired ? "bg-accent-soft/13" : "bg-danger/10"}`}
+          className={`flex h-9 items-center gap-2 rounded-full px-3 text-sm font-medium ${style.pill}`}
         >
-          <div
-            className={`h-2 w-2 rounded-full ${pairing?.paired ? "bg-accent-text" : "bg-danger"}`}
-          />
-          <span
-            className={`font-medium text-sm ${pairing?.paired ? "text-accent-text" : "text-danger"}`}
-          >
-            {pairing?.paired
-              ? `Server verbunden · ${pairing.serverUrl?.replace("http://", "")}`
-              : "Nicht verbunden"}
-          </span>
+          <span className={`h-2 w-2 rounded-full ${style.dot}`} />
+          {style.label}
+          {serverStatus === "online" && host && ` · ${host}`}
         </div>
         <IconButton
           ariaLabel="Benachrichtigungen"

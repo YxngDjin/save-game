@@ -4,8 +4,12 @@ import type { BackupSummary, ScannedGame, ServerBackup } from "../types";
 import GameHeader from "../components/GameHeader";
 import Tabs from "../components/Tabs";
 import LocationsTab from "../components/LocationsTab";
-import { mergeVersions } from "../versions";
+import { mergeVersions, type Version } from "../versions";
 import VersionRow from "../components/VersionRow";
+import { useBackupMeta } from "../hooks/useBackupMeta";
+import VersionDetail from "../components/VersionDetail";
+import RestoreDialog from "../components/RestoreDialog";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 
 type GameTab = "versions" | "locations";
 
@@ -31,12 +35,13 @@ const GameView = ({
     null,
   );
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-
+  const [restoreTarget, setRestoreTarget] = useState<Version | null>(null);
   const [serverBackups, setServerBackups] = useState<ServerBackup[] | null>(
     null,
   );
   const [serverError, setServerError] = useState("");
   const [tab, setTab] = useState<GameTab>("versions");
+  const meta = useBackupMeta();
 
   const versions = useMemo(
     () => mergeVersions(localBackups ?? [], serverBackups ?? []),
@@ -67,12 +72,36 @@ const GameView = ({
     (location) => location.found.length > 0,
   );
 
+  const restore = (version: Version) => {
+    setRestoreTarget(null);
+    const { local, server } = version;
+    if (local) {
+      onTask("Stelle wieder her ...", () =>
+        api.restoreBackup(id, local.fileName),
+      );
+    } else if (server) {
+      onTask("Lade vom Server und stelle wieder her ...", () =>
+        api.restoreServerBackup(id, server.id),
+      );
+    }
+  };
+
+  const openFolder = () => {
+    const path = foundLocations[0]?.found[0];
+    if (!path) return;
+    onTask("Öffne Ordner …", async () => {
+      await revealItemInDir(path);
+      return "Ordner geöffnet";
+    });
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <GameHeader
         entry={entry}
         busy={busy}
         onBack={onBack}
+        onOpenFolder={openFolder}
         onBackup={() => onTask("Sichere …", () => api.backupGame(id))}
       />
 
@@ -114,13 +143,27 @@ const GameView = ({
                     current={index === 0}
                     selected={version.key === selected?.key}
                     onSelect={() => setSelectedKey(version.key)}
+                    pinned={meta.isPinned(version.hash)}
+                    note={meta.getNote(version.hash)}
                   />
                 ))
               )}
             </section>
 
             <aside className="flex min-w-0 flex-[2_1_320px] flex-col gap-4 rounded-xl border border-border bg-surface p-5">
-              <p className="text-sm text-muted">Details folgen.</p>
+              {selected ? (
+                <VersionDetail
+                  version={selected}
+                  note={meta.getNote(selected.hash)}
+                  pinned={meta.isPinned(selected.hash)}
+                  busy={busy}
+                  onNoteChange={(note) => meta.setNote(selected.hash, note)}
+                  onTogglePin={() => meta.togglePin(selected.hash)}
+                  onRestore={() => setRestoreTarget(selected)}
+                />
+              ) : (
+                <p className="text-sm text-muted">Wähle eine Version aus.</p>
+              )}
             </aside>
           </div>
         </div>
@@ -130,6 +173,14 @@ const GameView = ({
         <LocationsTab
           locations={foundLocations}
           manifestName={entry.manifestName}
+        />
+      )}
+      {restoreTarget && (
+        <RestoreDialog
+          version={restoreTarget}
+          gameName={entry.game.name}
+          onCancel={() => setRestoreTarget(null)}
+          onConfirm={() => restore(restoreTarget)}
         />
       )}
     </div>

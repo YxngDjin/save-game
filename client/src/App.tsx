@@ -9,6 +9,7 @@ import GameView from "./views/GameView";
 import SettingsView from "./views/SettingsView";
 import Navbar from "./components/Navbar";
 import { useTheme } from "./hooks/useTheme";
+import { useServerStatus } from "./hooks/useServerStatus";
 
 function App() {
   const [search, setSearch] = useState("");
@@ -19,7 +20,8 @@ function App() {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [status, setStatusMap] = useState<Record<string, string>>({});
-  const { isDark, setTheme } = useTheme();
+  const { isDark, setTheme, theme } = useTheme();
+  const serverStatus = useServerStatus(pairing);
 
   const setStatus = (launcherId: string, text: string) => {
     setStatusMap((prev) => ({ ...prev, [launcherId]: text }));
@@ -82,6 +84,7 @@ function App() {
         isDark={isDark}
         onToggleTheme={() => setTheme(isDark ? "light" : "dark")}
         pairing={pairing}
+        serverStatus={serverStatus}
       />
       <div className="flex bg-surface flex-1 min-h-0 text-text">
         <Sidebar view={view} onNavigate={setView} />
@@ -125,7 +128,13 @@ function App() {
               );
             })()}
           {view.name === "settings" && (
-            <SettingsView pairing={pairing} onPairingChange={setPairing} />
+            <SettingsView
+              pairing={pairing}
+              onPairingChange={setPairing}
+              theme={theme}
+              onThemeChange={setTheme}
+              serverStatus={serverStatus}
+            />
           )}
         </main>
       </div>

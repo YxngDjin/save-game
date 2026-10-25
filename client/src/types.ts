@@ -68,3 +68,9 @@ export interface GameArt {
   hero: string | null;
   logo: string | null;
 }
+
+export interface StorageInfo {
+  path: string;
+  totalBytes: number;
+  backupCount: number;
+}

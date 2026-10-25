@@ -2,6 +2,7 @@ mod art;
 mod backup;
 mod config;
 mod credentials;
+mod info;
 mod launchers;
 mod manifest;
 mod paths;
@@ -301,6 +302,8 @@ pub fn run() {
             list_server_backups,
             restore_server_backup,
             art::get_game_art,
+            info::get_steam_libraries,
+            info::get_storage_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -9,9 +9,16 @@ interface GameHeaderProps {
   busy: boolean;
   onBack: () => void;
   onBackup: () => void;
+  onOpenFolder: () => void;
 }
 
-const GameHeader = ({ entry, busy, onBack, onBackup }: GameHeaderProps) => {
+const GameHeader = ({
+  entry,
+  busy,
+  onBack,
+  onBackup,
+  onOpenFolder,
+}: GameHeaderProps) => {
   const { game, files, totalSize } = entry;
   const art = useGameArt(game.launcherId, game.launcher);
 
@@ -57,7 +64,9 @@ const GameHeader = ({ entry, busy, onBack, onBackup }: GameHeaderProps) => {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            className="flex items-center gap-2 rounded-lg border border-border-strong bg-surface px-4 py-2.5 text-sm font-medium hover:bg-surface-2"
+            onClick={onOpenFolder}
+            disabled={files.length === 0}
+            className="flex items-center gap-2 rounded-lg disabled:opacity-50 border border-border-strong bg-surface px-4 py-2.5 text-sm font-medium hover:bg-surface-2"
           >
             <FolderOpen size={18} aria-hidden="true" />
             Ordner öffnen
