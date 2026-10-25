@@ -61,3 +61,10 @@ export interface Game {
   launcherId: string;
   installDir: string;
 }
+
+export interface GameArt {
+  header: string | null;
+  capsule: string | null;
+  hero: string | null;
+  logo: string | null;
+}

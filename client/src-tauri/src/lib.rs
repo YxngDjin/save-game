@@ -1,3 +1,4 @@
+mod art;
 mod backup;
 mod config;
 mod credentials;
@@ -6,8 +7,8 @@ mod manifest;
 mod paths;
 mod scan;
 mod server;
-mod watcher;
 mod tray;
+mod watcher;
 
 use launchers::Game;
 use serde::Serialize;
@@ -119,7 +120,11 @@ async fn restore_backup(
     let safety = if game.files.is_empty() {
         None
     } else {
-        Some(backup::create_backup(game, &root, "pre-restore")?.path().to_path_buf())
+        Some(
+            backup::create_backup(game, &root, "pre-restore")?
+                .path()
+                .to_path_buf(),
+        )
     };
 
     let steam_root = launchers::steam::steam_root().map_err(|e| e.to_string())?;
@@ -235,7 +240,7 @@ async fn perform_backup(
         return Ok(None);
     }
 
-        let (zip_path, local) = match backup::create_backup(game, &backup_root(app)?, reason)? {
+    let (zip_path, local) = match backup::create_backup(game, &backup_root(app)?, reason)? {
         backup::BackupOutcome::Created(path) => (path, "Gesichert"),
         backup::BackupOutcome::Unchanged(path) => (path, "Keine Änderung seit dem letzten Backup"),
     };
@@ -294,7 +299,8 @@ pub fn run() {
             pair_device,
             unpair_device,
             list_server_backups,
-            restore_server_backup
+            restore_server_backup,
+            art::get_game_art,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
