@@ -32,7 +32,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900">
+    <div className="min-h-screen bg-bg text-neutral-900">
       <header className="border-b border-neutral-200 bg-white">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-6">
@@ -52,7 +52,7 @@ function App() {
                   className={`rounded-lg px-3 py-1.5 text-sm ${
                     page === name
                       ? "bg-neutral-100 font-semibold"
-                      : "text-neutral-600 hover:bg-neutral-50"
+                      : "text-neutral-600 hover:bg-bg"
                   }`}
                 >
                   {name === "games" ? "Spiele" : "Geräte"}

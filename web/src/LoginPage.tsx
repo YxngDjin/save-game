@@ -25,7 +25,7 @@ const LoginPage = ({ onLoggedIn }: LoginPageProps) => {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-50 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-bg p-4">
       <form
         onSubmit={submit}
         className="flex w-full max-w-sm flex-col gap-4 rounded-xl border border-neutral-200 bg-white p-6"

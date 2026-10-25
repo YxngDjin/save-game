@@ -4,6 +4,7 @@ import type { ScannedGame } from "../types";
 
 interface GameViewProps {
   games: ScannedGame[];
+  search: string;
   loading: boolean;
   error: string;
   busyId: string | null;
@@ -15,6 +16,7 @@ interface GameViewProps {
 
 const GamesView = ({
   games,
+  search,
   loading,
   error,
   busyId,
@@ -23,7 +25,6 @@ const GamesView = ({
   onBackup,
   onOpen,
 }: GameViewProps) => {
-  const [search, setSearch] = useState("");
   const [onlyWithSaves, setOnlyWithSaves] = useState(true);
 
   const visible = useMemo(() => {
@@ -40,7 +41,7 @@ const GamesView = ({
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Spiele</h1>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-muted">
             {visible.length} von {games.length} Spielen
           </p>
         </div>
@@ -48,23 +49,13 @@ const GamesView = ({
           type="button"
           onClick={onRescan}
           disabled={loading}
-          className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm hover:bg-neutral-50 disabled:opacity-50"
+          className="rounded-lg border border-border-strong bg-white px-4 py-2 text-sm hover:bg-bg disabled:opacity-50"
         >
           {loading ? "Scanne …" : "Neu scannen"}
         </button>
       </header>
 
       <div className="flex flex-wrap items-center gap-4">
-        <label className="flex flex-col gap-1 text-xs text-neutral-500">
-          Suche
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.currentTarget.value)}
-            placeholder="Spiel suchen …"
-            className="w-72 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900"
-          />
-        </label>
         <label className="flex items-center gap-2 self-end pb-2 text-sm">
           <input
             type="checkbox"
@@ -76,14 +67,14 @@ const GamesView = ({
       </div>
 
       {error && (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm bg-red-50-700">
           {error}
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-border bg-white">
         <table className="w-full min-w-160 text-left text-sm">
-          <thead className="border-b border-neutral-200 text-xs uppercase tracking-wide text-neutral-500">
+          <thead className="border-b border-border text-xs uppercase tracking-wide text-muted">
             <tr>
               <th className="px-5 py-3 font-semibold">Spiel</th>
               <th className="px-5 py-3 font-semibold">Launcher</th>
@@ -108,17 +99,15 @@ const GamesView = ({
                       {entry.game.name}
                     </button>
                     {status[id] && (
-                      <p className="mt-1 text-xs text-neutral-500">
-                        {status[id]}
-                      </p>
+                      <p className="mt-1 text-xs text-muted">{status[id]}</p>
                     )}
                   </td>
                   <td className="px-5 py-3">
-                    <span className="rounded-md border border-neutral-300 px-2 py-0.5 text-xs">
+                    <span className="rounded-md border border-border-strong px-2 py-0.5 text-xs">
                       {entry.game.launcher}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-neutral-600">
+                  <td className="px-5 py-3 text-muted">
                     {entry.files.length > 0
                       ? `${entry.files.length} Dateien, ${formatSize(entry.totalSize)}`
                       : "Keine gefunden"}

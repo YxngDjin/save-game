@@ -62,7 +62,7 @@ const GameView = ({
       <button
         type="button"
         onClick={onBack}
-        className="self-start text-sm text-neutral-600 hover:underline"
+        className="self-start text-sm text-muted hover:underline"
       >
         ← Alle Spiele
       </button>
@@ -70,8 +70,8 @@ const GameView = ({
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">{entry.game.name}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-neutral-500">
-            <span className="rounded-md border border-neutral-300 px-2 py-0.5 text-xs text-neutral-900">
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
+            <span className="rounded-md border border-border-strong px-2 py-0.5 text-xs text-text">
               {entry.game.launcher}
             </span>
             <span>App-ID {id}</span>
@@ -92,27 +92,25 @@ const GameView = ({
       </header>
 
       {status && (
-        <p className="rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-700">
+        <p className="rounded-lg border border-border bg-white px-4 py-3 text-sm text-text">
           {status}
         </p>
       )}
 
-      <section className="rounded-xl border border-neutral-200 bg-white p-5">
+      <section className="rounded-xl border border-border bg-white p-5">
         <h2 className="mb-3 font-semibold">Gefundene Speicherorte</h2>
         {foundLocations.length === 0 ? (
-          <p className="text-sm text-neutral-500">
-            Keine Spielstände gefunden.
-          </p>
+          <p className="text-sm text-muted">Keine Spielstände gefunden.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {foundLocations.map((location) => (
               <li
                 key={location.rawPath}
-                className="rounded-lg bg-neutral-50 px-3 py-2 font-mono text-xs break-all"
+                className="rounded-lg bg-surface-2 px-3 py-2 font-mono text-xs break-all"
               >
                 {location.rawPath}
                 {location.tags.length > 0 && (
-                  <span className="ml-2 font-sans text-neutral-500">
+                  <span className="ml-2 font-sans text-muted">
                     [{location.tags.join(", ")}]
                   </span>
                 )}
@@ -120,20 +118,16 @@ const GameView = ({
             ))}
           </ul>
         )}
-        <p className="mt-3 text-xs text-neutral-500">
+        <p className="mt-3 text-xs text-muted">
           Quelle: Ludusavi-Manifest ({entry.manifestName})
         </p>
       </section>
 
-      <section className="rounded-xl border border-neutral-200 bg-white p-5">
+      <section className="rounded-xl border border-border bg-white p-5">
         <h2 className="mb-3 font-semibold">Lokale Backups</h2>
-        {localBackups === null && (
-          <p className="text-sm text-neutral-500">Lade …</p>
-        )}
+        {localBackups === null && <p className="text-sm text-muted">Lade …</p>}
         {localBackups?.length === 0 && (
-          <p className="text-sm text-neutral-500">
-            Noch keine Backups vorhanden.
-          </p>
+          <p className="text-sm text-muted">Noch keine Backups vorhanden.</p>
         )}
         <ul className="flex flex-col">
           {localBackups?.map((b) => {
@@ -147,7 +141,7 @@ const GameView = ({
                   <div className="text-sm font-medium">
                     {formatDate(b.createdAt)}
                   </div>
-                  <div className="text-xs text-neutral-500">
+                  <div className="text-xs text-muted">
                     {b.fileCount} Dateien, {formatSize(b.totalSize)}
                   </div>
                 </div>
@@ -169,16 +163,16 @@ const GameView = ({
       </section>
 
       {paired && (
-        <section className="rounded-xl border border-neutral-200 bg-white p-5">
+        <section className="rounded-xl border border-border bg-white p-5">
           <h2 className="mb-3 font-semibold">Server-Backups</h2>
-          {serverError && <p className="text-sm text-red-600">{serverError}</p>}
+          {serverError && (
+            <p className="text-sm bg-red-50-600">{serverError}</p>
+          )}
           {serverBackups === null && (
-            <p className="text-sm text-neutral-500">Lade …</p>
+            <p className="text-sm text-muted">Lade …</p>
           )}
           {serverBackups?.length === 0 && !serverError && (
-            <p className="text-sm text-neutral-500">
-              Keine Backups auf dem Server.
-            </p>
+            <p className="text-sm text-muted">Keine Backups auf dem Server.</p>
           )}
           <ul className="flex flex-col">
             {serverBackups?.map((b) => {
@@ -192,7 +186,7 @@ const GameView = ({
                     <div className="text-sm font-medium">
                       {formatDate(b.createdAt)}
                     </div>
-                    <div className="text-xs text-neutral-500">
+                    <div className="text-xs text-muted">
                       {b.deviceName} · {reasonLabels[b.reason] ?? b.reason} ·{" "}
                       {b.fileCount} Dateien, {formatSize(b.sizeBytes)}
                     </div>
@@ -215,7 +209,7 @@ const GameView = ({
         </section>
       )}
 
-      <p className="rounded-lg border border-dashed border-neutral-300 px-4 py-3 text-xs text-neutral-600">
+      <p className="rounded-lg border border-dashed border-border-strong px-4 py-3 text-xs text-muted">
         Vor jedem Wiederherstellen wird dein aktueller Stand automatisch
         gesichert.
       </p>

@@ -7,8 +7,11 @@ import { listen } from "@tauri-apps/api/event";
 import GamesView from "./views/GamesView";
 import GameView from "./views/GameView";
 import SettingsView from "./views/SettingsView";
+import Navbar from "./components/Navbar";
+import { useTheme } from "./hooks/useTheme";
 
 function App() {
+  const [search, setSearch] = useState("");
   const [view, setView] = useState<View>({ name: "games" });
   const [pairing, setPairing] = useState<PairingStatus | null>(null);
   const [games, setGames] = useState<ScannedGame[]>([]);
@@ -16,6 +19,7 @@ function App() {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [status, setStatusMap] = useState<Record<string, string>>({});
+  const { isDark, setTheme } = useTheme();
 
   const setStatus = (launcherId: string, text: string) => {
     setStatusMap((prev) => ({ ...prev, [launcherId]: text }));
@@ -71,52 +75,60 @@ function App() {
     runTask(launcherId, "Sichere ...", () => api.backupGame(launcherId));
 
   return (
-    <div className="flex h-screen bg-neutral-50 text-neutral-900">
-      <Sidebar view={view} pairing={pairing} onNavigate={setView} />
+    <div className="flex flex-col h-screen bg-bg text-text">
+      <Navbar
+        search={search}
+        onSearchChange={setSearch}
+        isDark={isDark}
+        onToggleTheme={() => setTheme(isDark ? "light" : "dark")}
+        pairing={pairing}
+      />
+      <div className="flex bg-surface flex-1 min-h-0 text-text">
+        <Sidebar view={view} onNavigate={setView} />
 
-      <main className="flex-1 overflow-y-auto p-8">
-        {view.name === "games" && (
-          <GamesView
-            games={games}
-            loading={loading}
-            error={error}
-            busyId={busyId}
-            status={status}
-            onRescan={scan}
-            onBackup={backup}
-            onOpen={(launcherId) => setView({ name: "game", launcherId })}
-          />
-        )}
-        {view.name === "game" &&
-          (() => {
-            const entry = games.find(
-              (g) => g.game.launcherId === view.launcherId,
-            );
-            if (!entry) {
-              return (
-                <p className="text-sm text-neutral-500">
-                  Spiel nicht gefunden.
-                </p>
+        <main className="flex-1 overflow-y-auto p-8">
+          {view.name === "games" && (
+            <GamesView
+              search={search}
+              games={games}
+              loading={loading}
+              error={error}
+              busyId={busyId}
+              status={status}
+              onRescan={scan}
+              onBackup={backup}
+              onOpen={(launcherId) => setView({ name: "game", launcherId })}
+            />
+          )}
+          {view.name === "game" &&
+            (() => {
+              const entry = games.find(
+                (g) => g.game.launcherId === view.launcherId,
               );
-            }
-            return (
-              <GameView
-                key={entry.game.launcherId}
-                entry={entry}
-                paired={pairing?.paired ?? false}
-                busy={busyId !== null}
-                status={status[entry.game.launcherId]}
-                onBack={() => setView({ name: "games" })}
-                onTask={(pending, task) =>
-                  runTask(entry.game.launcherId, pending, task)
-                }
-              />
-            );
-          })()}
-        {view.name === "settings" && (
-          <SettingsView pairing={pairing} onPairingChange={setPairing} />
-        )}
-      </main>
+              if (!entry) {
+                return (
+                  <p className="text-sm text-muted">Spiel nicht gefunden.</p>
+                );
+              }
+              return (
+                <GameView
+                  key={entry.game.launcherId}
+                  entry={entry}
+                  paired={pairing?.paired ?? false}
+                  busy={busyId !== null}
+                  status={status[entry.game.launcherId]}
+                  onBack={() => setView({ name: "games" })}
+                  onTask={(pending, task) =>
+                    runTask(entry.game.launcherId, pending, task)
+                  }
+                />
+              );
+            })()}
+          {view.name === "settings" && (
+            <SettingsView pairing={pairing} onPairingChange={setPairing} />
+          )}
+        </main>
+      </div>
     </div>
   );
 }

@@ -9,9 +9,9 @@ interface SettingsViewProps {
 }
 
 const inputClass =
-  "rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900";
+  "rounded-lg border border-border-strong bg-white px-3 py-2 text-sm text-text";
 const secondaryButton =
-  "rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm hover:bg-neutral-50 disabled:opacity-50";
+  "rounded-lg border border-border-strong bg-white px-4 py-2 text-sm hover:bg-surface-2 disabled:opacity-50";
 const primaryButton =
   "rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50";
 
@@ -70,10 +70,10 @@ const SettingsView = ({ pairing, onPairingChange }: SettingsViewProps) => {
     <div className="flex max-w-2xl flex-col gap-6">
       <h1 className="text-2xl font-semibold">Einstellungen</h1>
 
-      <section className="flex flex-col gap-4 rounded-xl border border-neutral-200 bg-white p-5">
+      <section className="flex flex-col gap-4 rounded-xl border border-border bg-white p-5">
         <div>
           <h2 className="font-semibold">Server</h2>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-muted">
             Dein Raspberry Pi oder NAS, auf dem die Spielstände gespeichert
             werden.
           </p>
@@ -97,7 +97,7 @@ const SettingsView = ({ pairing, onPairingChange }: SettingsViewProps) => {
         ) : (
           <>
             <div className="flex flex-wrap items-end gap-3">
-              <label className="flex flex-1 flex-col gap-1 text-xs text-neutral-500">
+              <label className="flex flex-1 flex-col gap-1 text-xs text-muted">
                 Serveradresse
                 <input
                   value={serverUrl}
@@ -118,13 +118,13 @@ const SettingsView = ({ pairing, onPairingChange }: SettingsViewProps) => {
 
             <div className="border-t border-neutral-100 pt-4">
               <h3 className="text-sm font-semibold">Gerät koppeln</h3>
-              <p className="text-sm text-neutral-500">
+              <p className="text-sm text-muted">
                 Fordere am Server einen Kopplungscode an und gib ihn hier ein.
               </p>
             </div>
 
             <div className="flex flex-wrap items-end gap-3">
-              <label className="flex flex-1 flex-col gap-1 text-xs text-neutral-500">
+              <label className="flex flex-1 flex-col gap-1 text-xs text-muted">
                 Gerätename
                 <input
                   value={deviceName}
@@ -132,7 +132,7 @@ const SettingsView = ({ pairing, onPairingChange }: SettingsViewProps) => {
                   className={inputClass}
                 />
               </label>
-              <label className="flex w-36 flex-col gap-1 text-xs text-neutral-500">
+              <label className="flex w-36 flex-col gap-1 text-xs text-muted">
                 Kopplungscode
                 <input
                   value={code}
@@ -157,10 +157,10 @@ const SettingsView = ({ pairing, onPairingChange }: SettingsViewProps) => {
           </>
         )}
 
-        {message && <p className="text-sm text-neutral-700">{message}</p>}
+        {message && <p className="text-sm text-text">{message}</p>}
       </section>
 
-      <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-5">
+      <section className="flex flex-col gap-3 rounded-xl border border-border bg-white p-5">
         <h2 className="font-semibold">Automatik</h2>
         <label className="flex items-center gap-3 text-sm">
           <input
@@ -170,7 +170,7 @@ const SettingsView = ({ pairing, onPairingChange }: SettingsViewProps) => {
           />
           Mit Windows starten (im Infobereich)
         </label>
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-muted">
           Nach dem Beenden eines Steam-Spiels wird automatisch gesichert und,
           wenn gekoppelt, auf den Server hochgeladen.
         </p>

@@ -47,7 +47,7 @@ export interface BackupSummary {
   createdAt: string;
   fileCount: number;
   totalSize: number;
-  contenthash: string;
+  contentHash: string;
 }
 
 export interface AutoBackupEvent {
