@@ -1,12 +1,6 @@
 import { Cloud, HardDrive, Pin, StickyNote } from "lucide-react";
-import { formatDate, formatSize, reasonLabels } from "../format";
+import { formatDate, formatSize, reasonLabels, reasonStyles } from "../format";
 import type { Version } from "../versions";
-
-const reasonStyles: Record<string, string> = {
-  auto: "bg-accent/15 text-accent-text",
-  manual: "bg-info/15 text-info",
-  "pre-restore": "bg-warn/15 text-warn",
-};
 
 interface VersionRowProps {
   version: Version;

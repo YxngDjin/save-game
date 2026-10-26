@@ -191,6 +191,15 @@ fn server_session(app: &tauri::AppHandle) -> Result<(String, String), String> {
 }
 
 #[tauri::command]
+async fn list_all_server_backups(
+    app: tauri::AppHandle,
+    manifest_names: Vec<String>,
+) -> Result<std::collections::HashMap<String, Vec<server::ServerBackup>>, String> {
+    let (url, token) = server_session(&app)?;
+    server::list_backup_for_games(&url, &token, &manifest_names).await
+}
+
+#[tauri::command]
 async fn list_server_backups(
     app: tauri::AppHandle,
     manifest_name: String,
@@ -375,6 +384,7 @@ pub fn run() {
             watcher::get_running_game,
             watcher::get_paused_until,
             watcher::pause_automatic,
+            list_all_server_backups
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,14 +1,8 @@
 import { Cloud, HardDrive, Pin, StickyNote } from "lucide-react";
 import GameImage from "./GameImage";
 import { useGameArt } from "../hooks/useGameArt";
-import { formatSize, reasonLabels } from "../format";
+import { formatSize, reasonLabels, reasonStyles } from "../format";
 import type { HistoryEntry } from "../hooks/useHistory";
-
-const reasonStyles: Record<string, { badge: string; dot: string }> = {
-  auto: { badge: "bg-accent/15 text-accent-text", dot: "bg-accent" },
-  manual: { badge: "bg-info/15 text-info", dot: "bg-info" },
-  "pre-restore": { badge: "bg-warn/15 text-warn", dot: "bg-warn" },
-};
 
 interface HistoryRowProps {
   entry: HistoryEntry;

@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import type { ScannedGame } from "../types";
 import GameCard from "../components/GameCard";
+import { useRunningGame } from "../hooks/useRunningGame";
+import RunningBanner from "../components/RunningBanner";
 
 interface GamesViewProps {
   games: ScannedGame[];
@@ -27,6 +29,14 @@ const GamesView = ({
 }: GamesViewProps) => {
   const [onlyWithSaves, setOnlyWithSaves] = useState(true);
 
+  const running = useRunningGame();
+  const runningKnown =
+    running !== null &&
+    games.some(
+      (entry) =>
+        entry.game.launcherId === running.launcherId && entry.files.length > 0,
+    );
+
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return games.filter(
@@ -38,6 +48,15 @@ const GamesView = ({
 
   return (
     <div className="flex flex-col gap-6">
+      {running && (
+        <RunningBanner
+          game={running}
+          known={runningKnown}
+          busy={busyId !== null}
+          onBackup={() => onBackup(running.launcherId)}
+          onOpen={() => onOpen(running.launcherId)}
+        />
+      )}
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold">Spiele</h1>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { mergeVersions, type Version } from "../versions";
-import type { ScannedGame } from "../types";
+import type { ScannedGame, ServerBackup } from "../types";
 
 export interface HistoryEntry {
   game: ScannedGame;
@@ -15,20 +15,26 @@ export const useHistory = (games: ScannedGame[], paired: boolean) => {
     let cancelled = false;
     const withSaves = games.filter((game) => game.files.length > 0);
 
-    Promise.all(
-      withSaves.map(async (game) => {
-        const [local, server] = await Promise.all([
-          api.listBackups(game.game.launcherId).catch(() => []),
-          paired
-            ? api.listServerBackups(game.manifestName).catch(() => [])
-            : Promise.resolve([]),
-        ]);
-        return mergeVersions(local, server).map((version) => ({
-          game,
-          version,
-        }));
-      }),
-    ).then((lists) => {
+    const load = async () => {
+      const server = paired
+        ? await api
+            .listAllServerBackups(withSaves.map((game) => game.manifestName))
+            .catch(() => ({}) as Record<string, ServerBackup[]>)
+        : {};
+
+      const lists = await Promise.all(
+        withSaves.map(async (game) => {
+          const local = await api
+            .listBackups(game.game.launcherId)
+            .catch(() => []);
+          const remote = server[game.manifestName] ?? [];
+          return mergeVersions(local, remote).map((version) => ({
+            game,
+            version,
+          }));
+        }),
+      );
+
       if (cancelled) return;
       const all = lists.flat();
       all.sort(
@@ -37,8 +43,9 @@ export const useHistory = (games: ScannedGame[], paired: boolean) => {
           new Date(a.version.createdAt).getTime(),
       );
       setEntries(all);
-    });
+    };
 
+    load();
     return () => {
       cancelled = true;
     };

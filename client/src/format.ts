@@ -21,3 +21,9 @@ export const formatTime = (ms: number) =>
     hour: "2-digit",
     minute: "2-digit",
   });
+
+export const reasonStyles: Record<string, { badge: string; dot: string }> = {
+  auto: { badge: "bg-accent/15 text-accent-text", dot: "bg-accent" },
+  manual: { badge: "bg-info/15 text-info", dot: "bg-info" },
+  "pre-restore": { badge: "bg-warn/15 text-warn", dot: "bg-warn" },
+};

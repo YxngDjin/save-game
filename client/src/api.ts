@@ -38,4 +38,8 @@ export const api = {
   getPausedUntil: () => invoke<number | null>("get_paused_until"),
   pauseAutomatic: (minutes: number) =>
     invoke<number | null>("pause_automatic", { minutes }),
+  listAllServerBackups: (manifestNames: string[]) =>
+    invoke<Record<string, ServerBackup[]>>("list_all_server_backups", {
+      manifestNames,
+    }),
 };
