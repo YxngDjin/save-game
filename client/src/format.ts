@@ -1,7 +1,9 @@
 export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
 
 export function formatDate(iso: string): string {
@@ -12,4 +14,16 @@ export const reasonLabels: Record<string, string> = {
   manual: "manuell",
   auto: "automatisch",
   "pre-restore": "vor Wiederherstellung",
+};
+
+export const formatTime = (ms: number) =>
+  new Date(ms).toLocaleTimeString("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+export const reasonStyles: Record<string, { badge: string; dot: string }> = {
+  auto: { badge: "bg-accent/15 text-accent-text", dot: "bg-accent" },
+  manual: { badge: "bg-info/15 text-info", dot: "bg-info" },
+  "pre-restore": { badge: "bg-warn/15 text-warn", dot: "bg-warn" },
 };

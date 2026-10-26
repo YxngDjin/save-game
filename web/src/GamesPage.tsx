@@ -131,7 +131,7 @@ export function GamesPage() {
                       </td>
                     </tr>
                     {expanded && (
-                      <tr className="border-b border-neutral-100 bg-neutral-50">
+                      <tr className="border-b border-neutral-100 bg-bg">
                         <td colSpan={3} className="px-5 py-3">
                           <GameBackups gameId={game.id} />
                         </td>

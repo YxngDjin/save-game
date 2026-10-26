@@ -51,7 +51,7 @@ function PairingCodeBox({
       <button
         type="button"
         onClick={onClose}
-        className="rounded-lg border border-neutral-300 px-4 py-2 text-sm hover:bg-neutral-50"
+        className="rounded-lg border border-neutral-300 px-4 py-2 text-sm hover:bg"
       >
         Fertig
       </button>
@@ -188,7 +188,7 @@ export function DevicesPage() {
                         <button
                           type="button"
                           onClick={() => setConfirmId(null)}
-                          className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs hover:bg-neutral-50"
+                          className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs hover:bg-bg"
                         >
                           Abbrechen
                         </button>
@@ -197,7 +197,7 @@ export function DevicesPage() {
                       <button
                         type="button"
                         onClick={() => setConfirmId(device.id)}
-                        className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs hover:bg-neutral-50"
+                        className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs hover:bg-bg"
                       >
                         Sperren
                       </button>

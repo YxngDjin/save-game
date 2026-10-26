@@ -19,7 +19,7 @@ const RestoreButton = ({
         type="button"
         onClick={onArm}
         disabled={disabled}
-        className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs hover:bg-neutral-50 disabled:opacity-50"
+        className="rounded-lg border border-border-strong px-3 py-1.5 text-xs hover:bg-surface-2 disabled:opacity-50"
       >
         Wiederherstellen
       </button>
@@ -38,7 +38,7 @@ const RestoreButton = ({
       <button
         type="button"
         onClick={onCancel}
-        className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs hover:bg-neutral-50"
+        className="rounded-lg border border-border-strong px-3 py-1.5 text-xs hover:bg-surface-2"
       >
         Abbrechen
       </button>

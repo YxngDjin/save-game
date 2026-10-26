@@ -1,16 +1,21 @@
 import { invoke } from "@tauri-apps/api/core";
-import type {
-  BackupSummary,
-  Health,
-  PairingStatus,
-  ScannedGame,
-  ServerBackup,
+import {
+  GameArt,
+  RunningGame,
+  StorageInfo,
+  type BackupSummary,
+  type Health,
+  type PairingStatus,
+  type ScannedGame,
+  type ServerBackup,
 } from "./types";
 
 export const api = {
   scanGames: () => invoke<ScannedGame[]>("scan_games"),
-  backupGame: (launcherId: string) => invoke<string>("backup_game", { launcherId }),
-  listBackups: (launcherId: string) => invoke<BackupSummary[]>("list_backups", { launcherId }),
+  backupGame: (launcherId: string) =>
+    invoke<string>("backup_game", { launcherId }),
+  listBackups: (launcherId: string) =>
+    invoke<BackupSummary[]>("list_backups", { launcherId }),
   restoreBackup: (launcherId: string, fileName: string) =>
     invoke<string>("restore_backup", { launcherId, fileName }),
   listServerBackups: (manifestName: string) =>
@@ -22,4 +27,19 @@ export const api = {
   pairDevice: (url: string, code: string, deviceName: string) =>
     invoke<PairingStatus>("pair_device", { url, code, deviceName }),
   unpairDevice: () => invoke<PairingStatus>("unpair_device"),
+  getGameArt: (launcherId: string) =>
+    invoke<GameArt>("get_game_art", { appId: launcherId }),
+  getStorageInfo: () => invoke<StorageInfo>("get_storage_info"),
+  getSteamLibraries: () => invoke<string[]>("get_steam_libraries"),
+  quitApp: () => invoke<void>("quit_app"),
+  openMainWindow: () => invoke<void>("open_main_window"),
+  backupAll: () => invoke<string>("backup_all"),
+  getRunningGame: () => invoke<RunningGame | null>("get_running_game"),
+  getPausedUntil: () => invoke<number | null>("get_paused_until"),
+  pauseAutomatic: (minutes: number) =>
+    invoke<number | null>("pause_automatic", { minutes }),
+  listAllServerBackups: (manifestNames: string[]) =>
+    invoke<Record<string, ServerBackup[]>>("list_all_server_backups", {
+      manifestNames,
+    }),
 };

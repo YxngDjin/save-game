@@ -47,7 +47,7 @@ export interface BackupSummary {
   createdAt: string;
   fileCount: number;
   totalSize: number;
-  contenthash: string;
+  contentHash: string;
 }
 
 export interface AutoBackupEvent {
@@ -60,4 +60,23 @@ export interface Game {
   launcher: string;
   launcherId: string;
   installDir: string;
+}
+
+export interface GameArt {
+  header: string | null;
+  capsule: string | null;
+  hero: string | null;
+  logo: string | null;
+}
+
+export interface StorageInfo {
+  path: string;
+  totalBytes: number;
+  backupCount: number;
+}
+
+export interface RunningGame {
+  launcherId: string;
+  name: string;
+  since: number;
 }

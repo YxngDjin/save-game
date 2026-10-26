@@ -1,14 +1,24 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
-import { formatDate, formatSize, reasonLabels } from "../format";
 import type { BackupSummary, ScannedGame, ServerBackup } from "../types";
-import RestoreButton from "../components/RestoreButton";
+import GameHeader from "../components/GameHeader";
+import Tabs from "../components/Tabs";
+import LocationsTab from "../components/LocationsTab";
+import { mergeVersions, type Version } from "../versions";
+import VersionRow from "../components/VersionRow";
+import { useBackupMeta } from "../hooks/useBackupMeta";
+import VersionDetail from "../components/VersionDetail";
+import RestoreDialog from "../components/RestoreDialog";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
+
+type GameTab = "versions" | "locations";
 
 interface GameViewProps {
   entry: ScannedGame;
   paired: boolean;
   busy: boolean;
   status?: string;
+  initialVersionKey?: string;
   onBack: () => void;
   onTask: (pending: string, task: () => Promise<string>) => Promise<void>;
 }
@@ -20,16 +30,30 @@ const GameView = ({
   status,
   onBack,
   onTask,
+  initialVersionKey,
 }: GameViewProps) => {
   const id = entry.game.launcherId;
   const [localBackups, setLocalBackups] = useState<BackupSummary[] | null>(
     null,
   );
+  const [selectedKey, setSelectedKey] = useState<string | null>(
+    initialVersionKey || null,
+  );
+  const [restoreTarget, setRestoreTarget] = useState<Version | null>(null);
   const [serverBackups, setServerBackups] = useState<ServerBackup[] | null>(
     null,
   );
   const [serverError, setServerError] = useState("");
-  const [confirmKey, setConfirmKey] = useState<string | null>(null);
+  const [tab, setTab] = useState<GameTab>("versions");
+  const meta = useBackupMeta();
+
+  const versions = useMemo(
+    () => mergeVersions(localBackups ?? [], serverBackups ?? []),
+    [localBackups, serverBackups],
+  );
+
+  const selected =
+    versions.find((version) => version.key === selectedKey) ?? versions[0];
 
   const reload = useCallback(async () => {
     setLocalBackups(await api.listBackups(id));
@@ -48,177 +72,121 @@ const GameView = ({
     reload();
   }, [reload, status]);
 
-  function act(pending: string, task: () => Promise<string>) {
-    setConfirmKey(null);
-    onTask(pending, task);
-  }
-
   const foundLocations = entry.locations.filter(
     (location) => location.found.length > 0,
   );
 
+  const restore = (version: Version) => {
+    setRestoreTarget(null);
+    const { local, server } = version;
+    if (local) {
+      onTask("Stelle wieder her ...", () =>
+        api.restoreBackup(id, local.fileName),
+      );
+    } else if (server) {
+      onTask("Lade vom Server und stelle wieder her ...", () =>
+        api.restoreServerBackup(id, server.id),
+      );
+    }
+  };
+
+  const openFolder = () => {
+    const path = foundLocations[0]?.found[0];
+    if (!path) return;
+    onTask("Öffne Ordner …", async () => {
+      await revealItemInDir(path);
+      return "Ordner geöffnet";
+    });
+  };
+
   return (
     <div className="flex flex-col gap-6">
-      <button
-        type="button"
-        onClick={onBack}
-        className="self-start text-sm text-neutral-600 hover:underline"
-      >
-        ← Alle Spiele
-      </button>
-
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{entry.game.name}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-neutral-500">
-            <span className="rounded-md border border-neutral-300 px-2 py-0.5 text-xs text-neutral-900">
-              {entry.game.launcher}
-            </span>
-            <span>App-ID {id}</span>
-            <span>·</span>
-            <span>
-              {entry.files.length} Dateien, {formatSize(entry.totalSize)}
-            </span>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => act("Sichere …", () => api.backupGame(id))}
-          disabled={busy || entry.files.length === 0}
-          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
-        >
-          Jetzt sichern
-        </button>
-      </header>
+      <GameHeader
+        entry={entry}
+        busy={busy}
+        onBack={onBack}
+        onOpenFolder={openFolder}
+        onBackup={() => onTask("Sichere …", () => api.backupGame(id))}
+      />
 
       {status && (
-        <p className="rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-700">
+        <p className="rounded-lg border border-border bg-surface px-4 py-3 text-sm">
           {status}
         </p>
       )}
 
-      <section className="rounded-xl border border-neutral-200 bg-white p-5">
-        <h2 className="mb-3 font-semibold">Gefundene Speicherorte</h2>
-        {foundLocations.length === 0 ? (
-          <p className="text-sm text-neutral-500">
-            Keine Spielstände gefunden.
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {foundLocations.map((location) => (
-              <li
-                key={location.rawPath}
-                className="rounded-lg bg-neutral-50 px-3 py-2 font-mono text-xs break-all"
-              >
-                {location.rawPath}
-                {location.tags.length > 0 && (
-                  <span className="ml-2 font-sans text-neutral-500">
-                    [{location.tags.join(", ")}]
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-        <p className="mt-3 text-xs text-neutral-500">
-          Quelle: Ludusavi-Manifest ({entry.manifestName})
-        </p>
-      </section>
+      <Tabs
+        tabs={[
+          { id: "versions", label: "Versionen", count: versions.length },
+          {
+            id: "locations",
+            label: "Speicherorte",
+            count: foundLocations.length,
+          },
+        ]}
+        active={tab}
+        onChange={setTab}
+      />
 
-      <section className="rounded-xl border border-neutral-200 bg-white p-5">
-        <h2 className="mb-3 font-semibold">Lokale Backups</h2>
-        {localBackups === null && (
-          <p className="text-sm text-neutral-500">Lade …</p>
-        )}
-        {localBackups?.length === 0 && (
-          <p className="text-sm text-neutral-500">
-            Noch keine Backups vorhanden.
-          </p>
-        )}
-        <ul className="flex flex-col">
-          {localBackups?.map((b) => {
-            const key = `local/${b.fileName}`;
-            return (
-              <li
-                key={key}
-                className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100 py-3 last:border-0"
-              >
-                <div>
-                  <div className="text-sm font-medium">
-                    {formatDate(b.createdAt)}
-                  </div>
-                  <div className="text-xs text-neutral-500">
-                    {b.fileCount} Dateien, {formatSize(b.totalSize)}
-                  </div>
-                </div>
-                <RestoreButton
-                  armed={confirmKey === key}
-                  disabled={busy}
-                  onArm={() => setConfirmKey(key)}
-                  onCancel={() => setConfirmKey(null)}
-                  onConfirm={() =>
-                    act("Stelle wieder her …", () =>
-                      api.restoreBackup(id, b.fileName),
-                    )
-                  }
-                />
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      {paired && (
-        <section className="rounded-xl border border-neutral-200 bg-white p-5">
-          <h2 className="mb-3 font-semibold">Server-Backups</h2>
-          {serverError && <p className="text-sm text-red-600">{serverError}</p>}
-          {serverBackups === null && (
-            <p className="text-sm text-neutral-500">Lade …</p>
-          )}
-          {serverBackups?.length === 0 && !serverError && (
-            <p className="text-sm text-neutral-500">
-              Keine Backups auf dem Server.
-            </p>
-          )}
-          <ul className="flex flex-col">
-            {serverBackups?.map((b) => {
-              const key = `server/${b.id}`;
-              return (
-                <li
-                  key={key}
-                  className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100 py-3 last:border-0"
-                >
-                  <div>
-                    <div className="text-sm font-medium">
-                      {formatDate(b.createdAt)}
-                    </div>
-                    <div className="text-xs text-neutral-500">
-                      {b.deviceName} · {reasonLabels[b.reason] ?? b.reason} ·{" "}
-                      {b.fileCount} Dateien, {formatSize(b.sizeBytes)}
-                    </div>
-                  </div>
-                  <RestoreButton
-                    armed={confirmKey === key}
-                    disabled={busy}
-                    onArm={() => setConfirmKey(key)}
-                    onCancel={() => setConfirmKey(null)}
-                    onConfirm={() =>
-                      act("Lade vom Server und stelle wieder her …", () =>
-                        api.restoreServerBackup(id, b.id),
-                      )
-                    }
+      {tab === "versions" && (
+        <div className="flex flex-col gap-3">
+          {serverError && <p className="text-sm text-danger">{serverError}</p>}
+          <div className="flex flex-wrap items-start gap-5">
+            <section className="flex min-w-0 flex-[3_1_420px] flex-col gap-2">
+              {localBackups === null ? (
+                <p className="text-sm text-muted">Lade …</p>
+              ) : versions.length === 0 ? (
+                <p className="text-sm text-muted">
+                  Noch keine Versionen vorhanden.
+                </p>
+              ) : (
+                versions.map((version, index) => (
+                  <VersionRow
+                    key={version.key}
+                    version={version}
+                    current={index === 0}
+                    selected={version.key === selected?.key}
+                    onSelect={() => setSelectedKey(version.key)}
+                    pinned={meta.isPinned(version.hash)}
+                    note={meta.getNote(version.hash)}
                   />
-                </li>
-              );
-            })}
-          </ul>
-        </section>
+                ))
+              )}
+            </section>
+
+            <aside className="flex min-w-0 flex-[2_1_320px] flex-col gap-4 rounded-xl border border-border bg-surface p-5">
+              {selected ? (
+                <VersionDetail
+                  version={selected}
+                  note={meta.getNote(selected.hash)}
+                  pinned={meta.isPinned(selected.hash)}
+                  busy={busy}
+                  onNoteChange={(note) => meta.setNote(selected.hash, note)}
+                  onTogglePin={() => meta.togglePin(selected.hash)}
+                  onRestore={() => setRestoreTarget(selected)}
+                />
+              ) : (
+                <p className="text-sm text-muted">Wähle eine Version aus.</p>
+              )}
+            </aside>
+          </div>
+        </div>
       )}
 
-      <p className="rounded-lg border border-dashed border-neutral-300 px-4 py-3 text-xs text-neutral-600">
-        Vor jedem Wiederherstellen wird dein aktueller Stand automatisch
-        gesichert.
-      </p>
+      {tab === "locations" && (
+        <LocationsTab
+          locations={foundLocations}
+          manifestName={entry.manifestName}
+        />
+      )}
+      {restoreTarget && (
+        <RestoreDialog
+          version={restoreTarget}
+          gameName={entry.game.name}
+          onCancel={() => setRestoreTarget(null)}
+          onConfirm={() => restore(restoreTarget)}
+        />
+      )}
     </div>
   );
 };

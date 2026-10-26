@@ -1,13 +1,15 @@
+mod art;
 mod backup;
 mod config;
 mod credentials;
+mod info;
 mod launchers;
 mod manifest;
 mod paths;
 mod scan;
 mod server;
-mod watcher;
 mod tray;
+mod watcher;
 
 use launchers::Game;
 use serde::Serialize;
@@ -15,6 +17,23 @@ use std::path::Path;
 use std::path::PathBuf;
 use tauri::Manager;
 use tauri::WindowEvent;
+
+pub struct BackupReport {
+    pub created: bool,
+    pub path: PathBuf,
+    pub upload: String,
+}
+
+impl BackupReport {
+    pub fn message(&self) -> String {
+        let local = if self.created {
+            "Gesichert"
+        } else {
+            "Keine Änderung seit dem letzten Backup"
+        };
+        format!("{local}: {}. {}", self.path.display(), self.upload)
+    }
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -119,7 +138,11 @@ async fn restore_backup(
     let safety = if game.files.is_empty() {
         None
     } else {
-        Some(backup::create_backup(game, &root, "pre-restore")?.path().to_path_buf())
+        Some(
+            backup::create_backup(game, &root, "pre-restore")?
+                .path()
+                .to_path_buf(),
+        )
     };
 
     let steam_root = launchers::steam::steam_root().map_err(|e| e.to_string())?;
@@ -155,6 +178,7 @@ async fn scan_games(app: tauri::AppHandle) -> Result<Vec<scan::ScannedGame>, Str
 async fn backup_game(app: tauri::AppHandle, launcher_id: String) -> Result<String, String> {
     perform_backup(&app, &launcher_id, "manual")
         .await?
+        .map(|report| report.message())
         .ok_or_else(|| "Keine Dateien zum Sichern gefunden".to_string())
 }
 
@@ -164,6 +188,15 @@ fn server_session(app: &tauri::AppHandle) -> Result<(String, String), String> {
         (Some(url), Some(token)) => Ok((url, token)),
         _ => Err("Nicht mit einem Server gekoppelt".to_string()),
     }
+}
+
+#[tauri::command]
+async fn list_all_server_backups(
+    app: tauri::AppHandle,
+    manifest_names: Vec<String>,
+) -> Result<std::collections::HashMap<String, Vec<server::ServerBackup>>, String> {
+    let (url, token) = server_session(&app)?;
+    server::list_backup_for_games(&url, &token, &manifest_names).await
 }
 
 #[tauri::command]
@@ -222,11 +255,22 @@ async fn try_upload(
         .map(Some)
 }
 
+#[tauri::command]
+fn open_main_window(app: tauri::AppHandle) {
+    tray::hide_tray_window(&app);
+    tray::show_main_window(&app);
+}
+
+#[tauri::command]
+fn quit_app(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
 async fn perform_backup(
     app: &tauri::AppHandle,
     launcher_id: &str,
     reason: &str,
-) -> Result<Option<String>, String> {
+) -> Result<Option<BackupReport>, String> {
     let scanned = run_scan(app).await?;
     let Some(game) = scanned.iter().find(|s| s.game.launcher_id == launcher_id) else {
         return Ok(None);
@@ -235,9 +279,9 @@ async fn perform_backup(
         return Ok(None);
     }
 
-        let (zip_path, local) = match backup::create_backup(game, &backup_root(app)?, reason)? {
-        backup::BackupOutcome::Created(path) => (path, "Gesichert"),
-        backup::BackupOutcome::Unchanged(path) => (path, "Keine Änderung seit dem letzten Backup"),
+    let (zip_path, created) = match backup::create_backup(game, &backup_root(app)?, reason)? {
+        backup::BackupOutcome::Created(path) => (path, true),
+        backup::BackupOutcome::Unchanged(path) => (path, false),
     };
 
     let upload = match try_upload(app, &zip_path).await {
@@ -247,7 +291,37 @@ async fn perform_backup(
         Err(e) => format!("Upload fehlgeschlagen: {e}"),
     };
 
-    Ok(Some(format!("{local}: {}. {upload}", zip_path.display())))
+    Ok(Some(BackupReport {
+        created,
+        path: zip_path,
+        upload,
+    }))
+}
+
+#[tauri::command]
+async fn backup_all(app: tauri::AppHandle) -> Result<String, String> {
+    let scanned = run_scan(&app).await?;
+    let ids: Vec<String> = scanned
+        .iter()
+        .filter(|game| !game.files.is_empty())
+        .map(|game| game.game.launcher_id.clone())
+        .collect();
+
+    let mut done = 0;
+    let mut failed = 0;
+    for id in &ids {
+        match perform_backup(&app, id, "manual").await {
+            Ok(Some(_)) => done += 1,
+            Ok(None) => {}
+            Err(_) => failed += 1,
+        }
+    }
+
+    Ok(if failed == 0 {
+        format!("{done} Spiele gesichert")
+    } else {
+        format!("{done} Spiele gesichert, {failed} fehlgeschlagen")
+    })
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -261,12 +335,18 @@ pub fn run() {
             Some(vec!["--minimized"]),
         ))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(manifest::ManifestState::default())
-        .on_window_event(|window, event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
+        .manage(watcher::WatcherState::default())
+        .on_window_event(|window, event| match event {
+            WindowEvent::CloseRequested { api, .. } => {
                 api.prevent_close();
                 let _ = window.hide();
             }
+            WindowEvent::Focused(false) if window.label() == "tray" => {
+                tray::hide_tray_window(window.app_handle());
+            }
+            _ => {}
         })
         .setup(|app| {
             tray::setup(app)?;
@@ -294,7 +374,17 @@ pub fn run() {
             pair_device,
             unpair_device,
             list_server_backups,
-            restore_server_backup
+            restore_server_backup,
+            art::get_game_art,
+            info::get_steam_libraries,
+            info::get_storage_info,
+            open_main_window,
+            quit_app,
+            backup_all,
+            watcher::get_running_game,
+            watcher::get_paused_until,
+            watcher::pause_automatic,
+            list_all_server_backups
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

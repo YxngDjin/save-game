@@ -2,6 +2,7 @@ use reqwest::multipart::{Form, Part};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 use std::path::Path;
 use std::time::Duration;
 
@@ -172,7 +173,29 @@ pub async fn upload_backup(
 struct ServerGame {
     id: String,
     manifest_name: String,
+    #[serde(default)]
+    backup_count: u64,
 }
+
+pub async fn list_backup_for_games(
+    base_url: &str,
+    token: &str,
+    manifest_names: &[String],
+) -> Result<HashMap<String, Vec<ServerBackup>>, String> {
+    let games: Vec<ServerGame> = get_json(base_url, token, "/games").await?;
+    let mut result = HashMap::new();
+
+    for game in games {
+        if game.backup_count == 0 || !manifest_names.contains(&game.manifest_name) {
+            continue;
+        }
+        let backups: Vec<ServerBackup> =
+            get_json(base_url, token, &format!("/games/{}/backups", game.id)).await?;
+        result.insert(game.manifest_name, backups);
+    }
+
+    Ok(result)
+} 
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
